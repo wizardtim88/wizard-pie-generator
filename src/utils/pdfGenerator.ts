@@ -13,6 +13,7 @@ export const generatePDF = (recipe: PieRecipe): void => {
   // Set initial cursor position
   let yPosition = 20;
   const leftMargin = 20;
+  const maxWidth = 170; // Maximum width for text to prevent overflow
   
   // Add title
   doc.setFontSize(24);
@@ -54,7 +55,7 @@ export const generatePDF = (recipe: PieRecipe): void => {
   doc.setFontSize(12);
   recipe.ingredients.crust.forEach((item) => {
     // Check if line would exceed page width
-    const textLines = doc.splitTextToSize(`• ${item}`, 170);
+    const textLines = doc.splitTextToSize(`• ${item}`, maxWidth);
     textLines.forEach(line => {
       // Check if we need a new page
       if (yPosition > 270) {
@@ -82,7 +83,7 @@ export const generatePDF = (recipe: PieRecipe): void => {
   doc.setFontSize(12);
   recipe.ingredients.filling.forEach((item) => {
     // Check if line would exceed page width
-    const textLines = doc.splitTextToSize(`• ${item}`, 170);
+    const textLines = doc.splitTextToSize(`• ${item}`, maxWidth);
     textLines.forEach(line => {
       // Check if we need a new page
       if (yPosition > 270) {
@@ -112,7 +113,7 @@ export const generatePDF = (recipe: PieRecipe): void => {
     doc.setFontSize(12);
     recipe.ingredients.topping.forEach((item) => {
       // Check if line would exceed page width
-      const textLines = doc.splitTextToSize(`• ${item}`, 170);
+      const textLines = doc.splitTextToSize(`• ${item}`, maxWidth);
       textLines.forEach(line => {
         // Check if we need a new page
         if (yPosition > 270) {
@@ -146,19 +147,19 @@ export const generatePDF = (recipe: PieRecipe): void => {
     const instructionText = instruction;
     
     // Split long instructions into multiple lines
-    const textLines = doc.splitTextToSize(instructionText, 165);
+    const textLines = doc.splitTextToSize(instructionText, maxWidth - 10);
+    
+    // Check if we need a new page before starting this instruction
+    if (yPosition > 270 - (textLines.length * 6)) {
+      doc.addPage();
+      yPosition = 20;
+    }
     
     // Add the number
     doc.text(numberText, leftMargin, yPosition);
     
     // Add the instruction text with proper indentation
     textLines.forEach((line, i) => {
-      // Check if we need a new page
-      if (yPosition > 270) {
-        doc.addPage();
-        yPosition = 20;
-      }
-      
       // First line goes next to the number, rest are indented
       const xPosition = i === 0 ? leftMargin + 7 : leftMargin + 7;
       doc.text(line, xPosition, yPosition);
@@ -166,6 +167,30 @@ export const generatePDF = (recipe: PieRecipe): void => {
     });
     
     yPosition += 3; // Add space between instructions
+  });
+  
+  // Add a note about magical ingredients
+  yPosition += 5;
+  doc.setFontSize(14);
+  doc.setTextColor(126, 105, 171);
+  
+  // Check if we need a new page
+  if (yPosition > 250) {
+    doc.addPage();
+    yPosition = 20;
+  }
+  
+  doc.text("Note on Magical Ingredients:", leftMargin, yPosition);
+  yPosition += 7;
+  
+  doc.setFontSize(12);
+  doc.setTextColor(100, 100, 100);
+  const magicNote = "Any magical ingredients (moonbeam sugar, fairy dust, etc.) can be replaced with their non-magical counterparts (regular sugar, cinnamon, etc.) while maintaining the same measurements for a delicious real-world version of this magical pie.";
+  
+  const noteLines = doc.splitTextToSize(magicNote, maxWidth);
+  noteLines.forEach(line => {
+    doc.text(line, leftMargin, yPosition);
+    yPosition += 6;
   });
   
   // Add footer
