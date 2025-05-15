@@ -2,6 +2,52 @@
 import { PieRecipe } from './recipeGenerator';
 import jsPDF from 'jspdf';
 
+// Define magical ingredient substitutions
+const magicalIngredientSubstitutions = new Map([
+  ["moonbeam sugar", "granulated sugar"],
+  ["starlight zest", "lemon or orange zest"],
+  ["powdered dragon scales", "cinnamon or chili powder"],
+  ["crystalized honey", "honey"],
+  ["enchanted maple syrup", "maple syrup"],
+  ["unicorn milk", "whole milk or heavy cream"],
+  ["mermaid tears", "lemon juice or rosewater"],
+  ["phoenix ash", "smoked paprika"],
+  ["fairy nectar", "honey or agave syrup"],
+  ["wizard's brew", "strong tea or coffee"],
+  ["goblin gold flakes", "edible gold leaf or yellow sprinkles"],
+  ["levitation powder", "baking powder"],
+  ["time-turning sugar", "brown sugar"],
+  ["whispering wind salt", "sea salt"],
+  ["magical moonstone dust", "vanilla sugar"],
+  ["dragon's breath peppers", "chili peppers or cayenne"],
+  ["fairy dust", "powdered sugar or cinnamon sugar"],
+  ["wizard's broth", "vegetable or chicken broth"],
+  ["dragon scale salt", "smoked salt"],
+  ["moonlit herbs", "fresh herbs"],
+  ["forest mushroom powder", "dried mushroom powder"],
+  ["enchanted garlic", "roasted garlic"],
+  ["thunderstruck pepper", "black pepper"],
+  ["mystical thyme", "thyme"],
+  ["fae rosemary", "rosemary"],
+  ["goblin's favorite spice blend", "mixed herbs and spices"],
+  ["crystallized vegetable stock", "vegetable bouillon"],
+  ["magical butter", "butter"],
+  ["fairy butter", "cultured butter"],
+  ["unicorn butter", "European-style butter"],
+  ["magical thickener", "cornstarch or flour"],
+  ["magical fat", "butter or oil"],
+  ["enchanted oil", "olive oil"],
+  ["wizard's cheese blend", "mixed grated cheeses"],
+  ["magical onions", "caramelized onions"],
+  ["dragon eggs", "large eggs"],
+  ["phoenix eggs", "duck eggs"],
+  ["fairy eggs", "quail eggs"],
+  ["magical stock", "homemade stock"],
+  ["enchanted berries", "mixed berries"],
+  ["fairy cream", "whipped cream"],
+  ["wizard's herb blend", "Italian herb blend"]
+]);
+
 export const generatePDF = (recipe: PieRecipe): void => {
   // Create new PDF document
   const doc = new jsPDF({
@@ -169,29 +215,89 @@ export const generatePDF = (recipe: PieRecipe): void => {
     yPosition += 3; // Add space between instructions
   });
   
-  // Add a note about magical ingredients
-  yPosition += 5;
-  doc.setFontSize(14);
-  doc.setTextColor(126, 105, 171);
+  // Collect all ingredients to find magical ones
+  const allIngredients = [
+    ...recipe.ingredients.crust,
+    ...recipe.ingredients.filling,
+    ...(recipe.ingredients.topping || [])
+  ];
   
-  // Check if we need a new page
-  if (yPosition > 250) {
-    doc.addPage();
-    yPosition = 20;
-  }
-  
-  doc.text("Note on Magical Ingredients:", leftMargin, yPosition);
-  yPosition += 7;
-  
-  doc.setFontSize(12);
-  doc.setTextColor(100, 100, 100);
-  const magicNote = "Any magical ingredients (moonbeam sugar, fairy dust, etc.) can be replaced with their non-magical counterparts (regular sugar, cinnamon, etc.) while maintaining the same measurements for a delicious real-world version of this magical pie.";
-  
-  const noteLines = doc.splitTextToSize(magicNote, maxWidth);
-  noteLines.forEach(line => {
-    doc.text(line, leftMargin, yPosition);
-    yPosition += 6;
+  // Find magical ingredients mentioned in the recipe
+  const mentionedMagicalIngredients: string[] = [];
+  magicalIngredientSubstitutions.forEach((realValue, magicalKey) => {
+    if (allIngredients.some(ingredient => 
+      ingredient.toLowerCase().includes(magicalKey.toLowerCase())
+    )) {
+      mentionedMagicalIngredients.push(`${magicalKey} → ${realValue}`);
+    }
   });
+  
+  // Add real world substitutions section if there are magical ingredients
+  if (mentionedMagicalIngredients.length > 0) {
+    yPosition += 5;
+    
+    // Check if we need a new page
+    if (yPosition > 250) {
+      doc.addPage();
+      yPosition = 20;
+    }
+    
+    doc.setFontSize(16);
+    doc.setTextColor(126, 105, 171);
+    doc.text("Real World Substitutions", leftMargin, yPosition);
+    yPosition += 8;
+    
+    doc.setFontSize(12);
+    doc.setTextColor(100, 100, 100);
+    const introText = "To make this pie in the non-magical world, use these substitutions:";
+    const introLines = doc.splitTextToSize(introText, maxWidth);
+    introLines.forEach(line => {
+      doc.text(line, leftMargin, yPosition);
+      yPosition += 6;
+    });
+    yPosition += 2;
+    
+    // Add each magical ingredient substitution
+    mentionedMagicalIngredients.forEach(substitution => {
+      // Check if we need a new page
+      if (yPosition > 270) {
+        doc.addPage();
+        yPosition = 20;
+      }
+      
+      const substitutionLines = doc.splitTextToSize(`• ${substitution}`, maxWidth);
+      substitutionLines.forEach(line => {
+        doc.text(line, leftMargin, yPosition);
+        yPosition += 6;
+      });
+    });
+    
+    yPosition += 5;
+  } else {
+    // Add a general note about magical ingredients if no specific magical ingredients found
+    yPosition += 5;
+    doc.setFontSize(14);
+    doc.setTextColor(126, 105, 171);
+    
+    // Check if we need a new page
+    if (yPosition > 250) {
+      doc.addPage();
+      yPosition = 20;
+    }
+    
+    doc.text("Note on Magical Ingredients:", leftMargin, yPosition);
+    yPosition += 7;
+    
+    doc.setFontSize(12);
+    doc.setTextColor(100, 100, 100);
+    const magicNote = "Any magical ingredients can be replaced with their non-magical counterparts while maintaining the same measurements for a delicious real-world version of this magical pie.";
+    
+    const noteLines = doc.splitTextToSize(magicNote, maxWidth);
+    noteLines.forEach(line => {
+      doc.text(line, leftMargin, yPosition);
+      yPosition += 6;
+    });
+  }
   
   // Add footer
   const pageCount = doc.getNumberOfPages();

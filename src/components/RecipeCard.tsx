@@ -3,7 +3,7 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { PieRecipe } from '@/utils/recipeGenerator';
-import { PieChart, CakeSlice, Utensils } from 'lucide-react';
+import { PieChart, CakeSlice, Utensils, Sparkles } from 'lucide-react';
 import { Badge } from "@/components/ui/badge";
 
 interface RecipeCardProps {
@@ -23,6 +23,69 @@ const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, className }) => {
   }
 
   const TypeIcon = recipe.type === "sweet" ? CakeSlice : Utensils;
+  
+  // Extract magical ingredients and create substitution mapping
+  const magicalIngredients = new Map([
+    ["moonbeam sugar", "granulated sugar"],
+    ["starlight zest", "lemon or orange zest"],
+    ["powdered dragon scales", "cinnamon or chili powder"],
+    ["crystalized honey", "honey"],
+    ["enchanted maple syrup", "maple syrup"],
+    ["unicorn milk", "whole milk or heavy cream"],
+    ["mermaid tears", "lemon juice or rosewater"],
+    ["phoenix ash", "smoked paprika"],
+    ["fairy nectar", "honey or agave syrup"],
+    ["wizard's brew", "strong tea or coffee"],
+    ["goblin gold flakes", "edible gold leaf or yellow sprinkles"],
+    ["levitation powder", "baking powder"],
+    ["time-turning sugar", "brown sugar"],
+    ["whispering wind salt", "sea salt"],
+    ["magical moonstone dust", "vanilla sugar"],
+    ["dragon's breath peppers", "chili peppers or cayenne"],
+    ["fairy dust", "powdered sugar or cinnamon sugar"],
+    ["wizard's broth", "vegetable or chicken broth"],
+    ["dragon scale salt", "smoked salt"],
+    ["moonlit herbs", "fresh herbs"],
+    ["forest mushroom powder", "dried mushroom powder"],
+    ["enchanted garlic", "roasted garlic"],
+    ["thunderstruck pepper", "black pepper"],
+    ["mystical thyme", "thyme"],
+    ["fae rosemary", "rosemary"],
+    ["goblin's favorite spice blend", "mixed herbs and spices"],
+    ["crystallized vegetable stock", "vegetable bouillon"],
+    ["magical butter", "butter"],
+    ["fairy butter", "cultured butter"],
+    ["unicorn butter", "European-style butter"],
+    ["magical thickener", "cornstarch or flour"],
+    ["magical fat", "butter or oil"],
+    ["enchanted oil", "olive oil"],
+    ["wizard's cheese blend", "mixed grated cheeses"],
+    ["magical onions", "caramelized onions"],
+    ["dragon eggs", "large eggs"],
+    ["phoenix eggs", "duck eggs"],
+    ["fairy eggs", "quail eggs"],
+    ["magical stock", "homemade stock"],
+    ["enchanted berries", "mixed berries"],
+    ["fairy cream", "whipped cream"],
+    ["wizard's herb blend", "Italian herb blend"]
+  ]);
+
+  // Collect all ingredients
+  const allIngredients: string[] = [
+    ...recipe.ingredients.crust,
+    ...recipe.ingredients.filling,
+    ...(recipe.ingredients.topping || [])
+  ];
+
+  // Find magical ingredients mentioned in the recipe
+  const mentionedMagicalIngredients = Array.from(magicalIngredients.keys())
+    .filter(magicalIngredient => 
+      allIngredients.some(ingredient => 
+        ingredient.toLowerCase().includes(magicalIngredient.toLowerCase())
+      )
+    );
+
+  const hasMagicalIngredients = mentionedMagicalIngredients.length > 0;
 
   return (
     <Card className={`bg-wizard-muted/20 border-wizard-muted/30 overflow-hidden animate-fade-in ${className}`}>
@@ -91,6 +154,28 @@ const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, className }) => {
             ))}
           </ol>
         </div>
+
+        {hasMagicalIngredients && (
+          <>
+            <Separator className="my-6 bg-wizard-muted/40" />
+            <div className="bg-wizard-accent/10 p-4 rounded-lg">
+              <h3 className="text-lg font-medium mb-3 flex items-center gap-2 magic-gradient">
+                <Sparkles className="h-5 w-5 text-wizard-accent" />
+                Real World Substitutions
+              </h3>
+              <p className="mb-3 text-wizard-foreground/80">
+                To make this pie in the non-magical world, use these substitutions:
+              </p>
+              <ul className="list-disc pl-5 space-y-1 text-wizard-foreground/80">
+                {mentionedMagicalIngredients.map((magicalIngredient, index) => (
+                  <li key={`sub-${index}`}>
+                    <span className="font-medium text-wizard-accent/90">{magicalIngredient}</span> → {magicalIngredients.get(magicalIngredient) || "regular equivalent"}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </>
+        )}
       </CardContent>
     </Card>
   );
