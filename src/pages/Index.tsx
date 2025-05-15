@@ -1,16 +1,20 @@
 
 import React, { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
-import { PieChart } from 'lucide-react';
+import { PieChart, Download, CakeSlice, Utensils } from 'lucide-react';
 import { generateRandomPieRecipe, PieRecipe } from '@/utils/recipeGenerator';
 import RecipeCard from '@/components/RecipeCard';
 import SparkleEffect from '@/components/SparkleEffect';
 import { toast } from 'sonner';
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
+import { generatePDF } from '@/utils/pdfGenerator';
 
 const Index = () => {
   const [recipe, setRecipe] = useState<PieRecipe | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [sparkle, setSparkle] = useState(false);
+  const [pieType, setPieType] = useState<"sweet" | "savory">("sweet");
   const buttonRef = useRef<HTMLButtonElement>(null);
 
   const generateRecipe = () => {
@@ -24,14 +28,30 @@ const Index = () => {
     
     // Add a slight delay for magical effect
     setTimeout(() => {
-      const newRecipe = generateRandomPieRecipe();
+      const newRecipe = generateRandomPieRecipe(pieType);
       setRecipe(newRecipe);
       setIsGenerating(false);
       toast.success(`Created "${newRecipe.title}"!`, {
-        description: "Your magical pie recipe is ready.",
+        description: `Your magical ${pieType} pie recipe is ready.`,
         position: "bottom-center",
       });
     }, 800);
+  };
+  
+  const handleDownloadPDF = () => {
+    if (!recipe) {
+      toast.error("No recipe to download", {
+        description: "Please generate a recipe first.",
+        position: "bottom-center",
+      });
+      return;
+    }
+    
+    generatePDF(recipe);
+    toast.success("Download started!", {
+      description: "Your magical recipe PDF is being conjured.",
+      position: "bottom-center",
+    });
   };
 
   return (
@@ -48,6 +68,30 @@ const Index = () => {
       </header>
       
       <main className="flex-1 container mx-auto px-4 pb-16 flex flex-col">
+        <div className="w-full max-w-md mx-auto mb-6">
+          <RadioGroup 
+            defaultValue="sweet" 
+            value={pieType} 
+            onValueChange={(value: "sweet" | "savory") => setPieType(value)} 
+            className="flex justify-center gap-8"
+          >
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="sweet" id="sweet" />
+              <Label htmlFor="sweet" className="flex items-center gap-2 text-lg cursor-pointer">
+                <CakeSlice className="h-5 w-5" />
+                Sweet
+              </Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="savory" id="savory" />
+              <Label htmlFor="savory" className="flex items-center gap-2 text-lg cursor-pointer">
+                <Utensils className="h-5 w-5" />
+                Savory
+              </Label>
+            </div>
+          </RadioGroup>
+        </div>
+        
         <div className="flex justify-center mb-8">
           <Button
             ref={buttonRef}
@@ -64,6 +108,19 @@ const Index = () => {
         
         <div className="flex-1 w-full max-w-4xl mx-auto">
           <RecipeCard recipe={recipe} className="min-h-[400px]" />
+          
+          {recipe && (
+            <div className="flex justify-center mt-4">
+              <Button 
+                onClick={handleDownloadPDF} 
+                variant="outline" 
+                className="border-wizard-accent/50 hover:bg-wizard-accent/20 text-wizard-accent"
+              >
+                <Download className="mr-2 h-4 w-4" />
+                Download Recipe PDF
+              </Button>
+            </div>
+          )}
         </div>
       </main>
       

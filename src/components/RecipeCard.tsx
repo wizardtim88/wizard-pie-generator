@@ -3,7 +3,8 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { PieRecipe } from '@/utils/recipeGenerator';
-import { PieChart } from 'lucide-react';
+import { PieChart, CakeSlice, Utensils } from 'lucide-react';
+import { Badge } from "@/components/ui/badge";
 
 interface RecipeCardProps {
   recipe: PieRecipe | null;
@@ -21,12 +22,20 @@ const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, className }) => {
     );
   }
 
+  const TypeIcon = recipe.type === "sweet" ? CakeSlice : Utensils;
+
   return (
     <Card className={`bg-wizard-muted/20 border-wizard-muted/30 overflow-hidden animate-fade-in ${className}`}>
       <CardHeader className="bg-gradient-to-r from-wizard-accent/30 to-transparent">
-        <div className="flex items-center gap-3">
-          <PieChart className="h-6 w-6 text-wizard-accent" />
-          <CardTitle className="text-xl font-semibold">{recipe.title}</CardTitle>
+        <div className="flex items-center gap-3 justify-between">
+          <div className="flex items-center gap-3">
+            <PieChart className="h-6 w-6 text-wizard-accent" />
+            <CardTitle className="text-xl font-semibold">{recipe.title}</CardTitle>
+          </div>
+          <Badge variant="outline" className="border-wizard-accent/50 text-wizard-accent flex items-center gap-1.5">
+            <TypeIcon className="h-3.5 w-3.5" />
+            {recipe.type === "sweet" ? "Sweet" : "Savory"}
+          </Badge>
         </div>
       </CardHeader>
       <CardContent className="p-6 text-left">

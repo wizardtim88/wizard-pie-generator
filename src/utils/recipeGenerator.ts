@@ -1,9 +1,9 @@
-
 // Recipe types and generator functions
 
 export interface PieRecipe {
   id: string;
   title: string;
+  type: "sweet" | "savory";
   ingredients: {
     crust: string[];
     filling: string[];
@@ -16,12 +16,18 @@ export interface PieRecipe {
 }
 
 // Arrays of possible pie components
-const pieTypes = [
+const sweetPieTypes = [
   "Apple", "Cherry", "Blueberry", "Pumpkin", "Pecan", "Strawberry", 
-  "Lemon Meringue", "Key Lime", "Chocolate", "Banana Cream", "Coconut Cream", 
-  "Shepherd's", "Chicken Pot", "Stargazy", "Moon", "Wizard's", "Dragon Fruit", 
-  "Enchanted Berry", "Magical Mincemeat", "Mystical Maple", "Fairy's Favorite",
-  "Unicorn Dream", "Phoenix Fire", "Mermaid's Pearl", "Goblin's Gold"
+  "Lemon Meringue", "Key Lime", "Chocolate", "Banana Cream", "Coconut Cream",
+  "Dragon Fruit", "Enchanted Berry", "Magical Mincemeat", "Mystical Maple", 
+  "Fairy's Favorite", "Unicorn Dream", "Phoenix Fire", "Mermaid's Pearl"
+];
+
+const savoryPieTypes = [
+  "Shepherd's", "Chicken Pot", "Stargazy", "Moon", "Wizard's",
+  "Dragon's Lair", "Forest Mushroom", "Goblin's Gold", "Knight's Feast",
+  "Hearty Vegetable", "Rustic Potato", "Enchanted Spinach", "Mystical Meat",
+  "Seafarer's Delight", "Huntsman's", "Wizard's Stew", "Woodcutter's"
 ];
 
 const crusts = [
@@ -32,9 +38,15 @@ const crusts = [
   "Whispered Wish Almond Crust", "Midnight Shadow Crust"
 ];
 
-const baseFruitFillings = [
+const sweetFillings = [
   "fresh apples", "cherries", "blueberries", "strawberries", "peaches", 
   "blackberries", "raspberries", "mangoes", "dragon fruit", "star fruit"
+];
+
+const savoryFillings = [
+  "tender chicken", "seasoned beef", "wild mushrooms", "roasted vegetables",
+  "spinach and feta", "potato and leek", "smoked fish", "spiced lentils",
+  "caramelized onions", "butternut squash", "dragon's breath peppers"
 ];
 
 const creamFillings = [
@@ -63,6 +75,18 @@ const toppings = [
   "shimmering pearl dust", "levitating marshmallows", "color-changing sprinkles"
 ];
 
+const savorySpices = [
+  "thyme", "rosemary", "sage", "black pepper", "garlic powder",
+  "onion powder", "paprika", "cumin", "dragon's breath", "wizard's herb blend",
+  "enchanted bay leaves", "mystic oregano", "shadow salt"
+];
+
+const savorySpecialIngredients = [
+  "wizard's broth", "dragon scale salt", "moonlit herbs", "forest mushroom powder",
+  "enchanted garlic", "thunderstruck pepper", "mystical thyme", "fae rosemary",
+  "goblin's favorite spice blend", "crystallized vegetable stock"
+];
+
 // Generate a random number between min and max (inclusive)
 const getRandomInt = (min: number, max: number): number => {
   return Math.floor(Math.random() * (max - min + 1)) + min;
@@ -85,9 +109,10 @@ const generateId = (): string => {
   return Math.random().toString(36).substring(2, 15);
 };
 
-// Generate a random pie title
-const generatePieTitle = (): string => {
-  const type = getRandomItem(pieTypes);
+// Generate a random pie title based on pie type
+const generatePieTitle = (pieType: "sweet" | "savory"): string => {
+  const typeArray = pieType === "sweet" ? sweetPieTypes : savoryPieTypes;
+  const type = getRandomItem(typeArray);
   const prefixes = ["Magical", "Enchanted", "Wizard's", "Mystical", "Spellbound", "Secret", "Ancient", "Celestial", ""];
   const suffixes = ["Delight", "Wonder", "Surprise", "Dream", "Spell", "Creation", "Pie", "Charm", "Treasure", ""];
   
@@ -119,7 +144,7 @@ const generateServings = (): number => {
 };
 
 // Generate random pie crust ingredients
-const generateCrustIngredients = (): string[] => {
+const generateCrustIngredients = (pieType: "sweet" | "savory"): string[] => {
   const ingredients = [
     `2 cups flour`,
     `1 teaspoon salt`,
@@ -129,81 +154,130 @@ const generateCrustIngredients = (): string[] => {
   
   // Add random special ingredient
   if (Math.random() > 0.7) {
-    ingredients.push(`1 pinch of ${getRandomItem(specialIngredients)}`);
+    ingredients.push(`1 pinch of ${getRandomItem(pieType === "sweet" ? specialIngredients : savorySpecialIngredients)}`);
+  }
+
+  // Add special savory crust ingredients
+  if (pieType === "savory" && Math.random() > 0.5) {
+    ingredients.push(`${getRandomInt(1, 3)} teaspoons ${getRandomItem(savorySpices)}`);
   }
   
   return ingredients;
 };
 
 // Generate random filling ingredients based on pie type
-const generateFillingIngredients = (): string[] => {
+const generateFillingIngredients = (pieType: "sweet" | "savory"): string[] => {
   const ingredients: string[] = [];
   
-  // Decide if fruit or cream based
-  const isFruitBased = Math.random() > 0.4;
-  
-  if (isFruitBased) {
-    // Fruit based
-    const mainFruit = getRandomItem(baseFruitFillings);
-    const fruitAmount = getRandomInt(3, 6);
-    ingredients.push(`${fruitAmount} cups ${mainFruit}, ${getRandomItem(["sliced", "diced", "chopped", "whole"])}`);
-    ingredients.push(`${getRandomInt(3, 8) / 4} cup ${getRandomItem(["sugar", "brown sugar", "maple sugar", "honey", "moonbeam sugar"])}`);
+  if (pieType === "sweet") {
+    // Decide if fruit or cream based
+    const isFruitBased = Math.random() > 0.4;
+    
+    if (isFruitBased) {
+      // Fruit based
+      const mainFruit = getRandomItem(sweetFillings);
+      const fruitAmount = getRandomInt(3, 6);
+      ingredients.push(`${fruitAmount} cups ${mainFruit}, ${getRandomItem(["sliced", "diced", "chopped", "whole"])}`);
+      ingredients.push(`${getRandomInt(3, 8) / 4} cup ${getRandomItem(["sugar", "brown sugar", "maple sugar", "honey", "moonbeam sugar"])}`);
+      
+      // Add spices
+      const pieSpices = getRandomItems(spices, 1, 3);
+      pieSpices.forEach(spice => {
+        ingredients.push(`${getRandomInt(1, 2)} teaspoon${getRandomInt(1, 2) === 1 ? "" : "s"} ${spice}`);
+      });
+      
+      // Add thickener
+      ingredients.push(`${getRandomInt(2, 4)} tablespoons ${getRandomItem(["cornstarch", "flour", "tapioca starch", "arrowroot", "magical thickener"])}`);
+    } else {
+      // Cream based
+      const baseCream = getRandomItem(creamFillings);
+      ingredients.push(`2 cups ${baseCream}`);
+      ingredients.push(`${getRandomInt(2, 4)} large ${getRandomItem(["eggs", "dragon eggs", "phoenix eggs", "fairy eggs"])}`);
+      ingredients.push(`1 cup ${getRandomItem(["heavy cream", "milk", "half-and-half", "unicorn milk", "fairy cream"])}`);
+      ingredients.push(`${getRandomInt(1, 2)} teaspoon${getRandomInt(1, 2) === 1 ? "" : "s"} vanilla extract`);
+      
+      // Maybe add a special ingredient
+      if (Math.random() > 0.5) {
+        ingredients.push(`2 tablespoons ${getRandomItem(specialIngredients)}`);
+      }
+    }
+  } else {
+    // Savory pie
+    const mainFilling = getRandomItem(savoryFillings);
+    ingredients.push(`${getRandomInt(2, 4)} cups ${mainFilling}, ${getRandomItem(["diced", "chopped", "sliced", "cubed"])}`);
+    ingredients.push(`${getRandomInt(1, 3)} ${getRandomItem(["onions", "magical onions", "shallots", "leeks"])}, finely chopped`);
+    ingredients.push(`${getRandomInt(1, 3)} tablespoons ${getRandomItem(["butter", "olive oil", "enchanted oil", "magical fat"])}`);
     
     // Add spices
-    const pieSpices = getRandomItems(spices, 1, 3);
-    pieSpices.forEach(spice => {
+    const savoryPieSpices = getRandomItems(savorySpices, 1, 3);
+    savoryPieSpices.forEach(spice => {
       ingredients.push(`${getRandomInt(1, 2)} teaspoon${getRandomInt(1, 2) === 1 ? "" : "s"} ${spice}`);
     });
     
     // Add thickener
-    ingredients.push(`${getRandomInt(2, 4)} tablespoons ${getRandomItem(["cornstarch", "flour", "tapioca starch", "arrowroot", "magical thickener"])}`);
-  } else {
-    // Cream based
-    const baseCream = getRandomItem(creamFillings);
-    ingredients.push(`2 cups ${baseCream}`);
-    ingredients.push(`${getRandomInt(2, 4)} large ${getRandomItem(["eggs", "dragon eggs", "phoenix eggs", "fairy eggs"])}`);
-    ingredients.push(`1 cup ${getRandomItem(["heavy cream", "milk", "half-and-half", "unicorn milk", "fairy cream"])}`);
-    ingredients.push(`${getRandomInt(1, 2)} teaspoon${getRandomInt(1, 2) === 1 ? "" : "s"} vanilla extract`);
-    
-    // Maybe add a special ingredient
-    if (Math.random() > 0.5) {
-      ingredients.push(`2 tablespoons ${getRandomItem(specialIngredients)}`);
-    }
+    ingredients.push(`${getRandomInt(2, 3)} tablespoons ${getRandomItem(["flour", "magical thickener", "cornstarch"])}`);
+    ingredients.push(`${getRandomInt(1, 2)} cup${getRandomInt(1, 2) === 1 ? "" : "s"} ${getRandomItem(["broth", "stock", "wizard's broth", "magical stock"])}`);
   }
   
   return ingredients;
 };
 
 // Generate random topping ingredients
-const generateToppingIngredients = (): string[] => {
+const generateToppingIngredients = (pieType: "sweet" | "savory"): string[] => {
   // 30% chance of no topping
   if (Math.random() < 0.3) {
     return [];
   }
   
   const ingredients: string[] = [];
-  const mainTopping = getRandomItem(toppings);
   
-  ingredients.push(`1 cup ${mainTopping}`);
-  
-  // 40% chance of a second topping
-  if (Math.random() < 0.4) {
-    const secondTopping = getRandomItem(toppings.filter(t => t !== mainTopping));
-    ingredients.push(`${getRandomInt(2, 4)} tablespoons ${secondTopping}`);
+  if (pieType === "sweet") {
+    const mainTopping = getRandomItem(toppings);
+    ingredients.push(`1 cup ${mainTopping}`);
+    
+    // 40% chance of a second topping
+    if (Math.random() < 0.4) {
+      const secondTopping = getRandomItem(toppings.filter(t => t !== mainTopping));
+      ingredients.push(`${getRandomInt(2, 4)} tablespoons ${secondTopping}`);
+    }
+  } else {
+    // Savory toppings
+    const savoryToppings = [
+      "grated cheese", "breadcrumbs", "herb butter", "crispy onions", 
+      "crushed nuts", "golden pastry stars", "wizard's cheese blend", 
+      "enchanted herb mixture", "mystical seeds"
+    ];
+    
+    const mainTopping = getRandomItem(savoryToppings);
+    ingredients.push(`${getRandomInt(1, 2)} cup${getRandomInt(1, 2) === 1 ? "" : "s"} ${mainTopping}`);
+    
+    // 30% chance of a second topping
+    if (Math.random() < 0.3) {
+      const secondTopping = getRandomItem(savoryToppings.filter(t => t !== mainTopping));
+      ingredients.push(`${getRandomInt(2, 4)} tablespoons ${secondTopping}`);
+    }
   }
   
   return ingredients;
 };
 
-// Generate random instructions
-const generateInstructions = (hasTopping: boolean): string[] => {
+// Generate random instructions based on pie type
+const generateInstructions = (pieType: "sweet" | "savory", hasTopping: boolean): string[] => {
   const instructions = [
     "Preheat your oven with a wave of your wand (or just turn the knob).",
     `Prepare the crust by mixing dry ingredients, then incorporate the cold butter until the mixture resembles coarse crumbs. Add liquid gradually until the dough forms. Chill for 30 minutes.`,
     "Roll out the dough and transfer to a pie dish. Perform a silent incantation (optional) for extra flakiness.",
-    "Mix the filling ingredients in a cauldron (or regular bowl) until well combined.",
-    "Pour the filling into the prepared crust, ensuring even distribution of the magical energies (and ingredients).",
   ];
+
+  if (pieType === "sweet") {
+    instructions.push("Mix the filling ingredients in a cauldron (or regular bowl) until well combined.");
+    instructions.push("Pour the filling into the prepared crust, ensuring even distribution of the magical energies (and ingredients).");
+  } else {
+    instructions.push("Sauté the main filling ingredients until they release their magical aromas (about 5-7 minutes).");
+    instructions.push("Add spices and cook for another minute to awaken their mystical properties.");
+    instructions.push("Pour in the liquid ingredients and simmer until slightly thickened.");
+    instructions.push("Allow the mixture to cool slightly before transferring to the prepared crust.");
+  }
 
   if (hasTopping) {
     instructions.push("Prepare the topping according to the ancient scrolls (or just follow common sense).");
@@ -217,17 +291,18 @@ const generateInstructions = (hasTopping: boolean): string[] => {
   return instructions;
 };
 
-// Generate a random pie recipe
-export const generateRandomPieRecipe = (): PieRecipe => {
-  const title = generatePieTitle();
-  const crust = generateCrustIngredients();
-  const filling = generateFillingIngredients();
-  const topping = generateToppingIngredients();
-  const instructions = generateInstructions(topping.length > 0);
+// Generate a random pie recipe with specified type
+export const generateRandomPieRecipe = (pieType: "sweet" | "savory" = "sweet"): PieRecipe => {
+  const title = generatePieTitle(pieType);
+  const crust = generateCrustIngredients(pieType);
+  const filling = generateFillingIngredients(pieType);
+  const topping = generateToppingIngredients(pieType);
+  const instructions = generateInstructions(pieType, topping.length > 0);
   
   return {
     id: generateId(),
     title,
+    type: pieType,
     ingredients: {
       crust,
       filling,
