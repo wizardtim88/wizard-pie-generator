@@ -3,8 +3,10 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { PieRecipe } from '@/utils/recipeGenerator';
-import { PieChart, CakeSlice, Utensils, Sparkles } from 'lucide-react';
+import { PieChart, CakeSlice, Utensils, Sparkles, Download } from 'lucide-react';
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { generatePDF } from "@/utils/pdfGenerator";
 
 interface RecipeCardProps {
   recipe: PieRecipe | null;
@@ -86,6 +88,10 @@ const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, className }) => {
     );
 
   const hasMagicalIngredients = mentionedMagicalIngredients.length > 0;
+  
+  const handleDownloadPDF = () => {
+    generatePDF(recipe);
+  };
 
   return (
     <Card className={`bg-wizard-muted/20 border-wizard-muted/30 overflow-hidden animate-fade-in ${className}`}>
@@ -95,10 +101,20 @@ const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, className }) => {
             <PieChart className="h-6 w-6 text-wizard-accent" />
             <CardTitle className="text-xl font-semibold">{recipe.title}</CardTitle>
           </div>
-          <Badge variant="outline" className="border-wizard-accent/50 text-wizard-accent flex items-center gap-1.5">
-            <TypeIcon className="h-3.5 w-3.5" />
-            {recipe.type === "sweet" ? "Sweet" : "Savory"}
-          </Badge>
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className="border-wizard-accent/50 text-wizard-accent flex items-center gap-1.5">
+              <TypeIcon className="h-3.5 w-3.5" />
+              {recipe.type === "sweet" ? "Sweet" : "Savory"}
+            </Badge>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={handleDownloadPDF} 
+              className="border-wizard-accent/50 text-wizard-accent hover:bg-wizard-accent/10"
+            >
+              <Download className="h-3.5 w-3.5 mr-1" /> PDF
+            </Button>
+          </div>
         </div>
       </CardHeader>
       <CardContent className="p-6 text-left">

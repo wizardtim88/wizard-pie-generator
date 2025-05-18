@@ -56,167 +56,189 @@ export const generatePDF = (recipe: PieRecipe): void => {
     format: "a4"
   });
   
-  // Set initial cursor position
-  let yPosition = 20;
-  const leftMargin = 20;
-  const maxWidth = 170; // Maximum width for text to prevent overflow
+  // Page dimensions
+  const pageWidth = 210;
+  const pageHeight = 297;
+  
+  // Yellow background rectangle dimensions
+  const rectX = 15;
+  const rectY = 15;
+  const rectWidth = pageWidth - 30;
+  const rectHeight = pageHeight - 30;
+  
+  // Set yellow background rectangle
+  doc.setFillColor(254, 247, 205); // #FEF7CD - Soft Yellow
+  doc.rect(rectX, rectY, rectWidth, rectHeight, 'F');
+  
+  // Add wizard image in bottom right corner
+  // This would be a placeholder for now as we need to add actual wizard image assets
+  
+  // Content margins (inside the yellow rectangle)
+  const contentMarginLeft = 25;
+  const contentMarginRight = 25;
+  const contentMarginTop = 25;
+  const contentMarginBottom = 60; // Leave space for wizard image
+  const contentWidth = pageWidth - contentMarginLeft - contentMarginRight;
+  
+  // Start position for content
+  let yPosition = contentMarginTop;
+  
+  // Function to check available space and adjust font sizes if needed
+  const checkAndAdjustContent = (content: string[], estimatedHeight: number, currentFontSize: number): number => {
+    const availableSpace = pageHeight - contentMarginBottom - yPosition;
+    if (estimatedHeight > availableSpace && currentFontSize > 8) {
+      // Reduce font size and recalculate
+      return currentFontSize - 0.5;
+    }
+    return currentFontSize;
+  };
+  
+  // Calculate total content length to estimate space needs
+  const allInstructions = recipe.instructions.join(' ');
+  const allIngredients = [
+    ...recipe.ingredients.crust,
+    ...recipe.ingredients.filling,
+    ...(recipe.ingredients.topping || [])
+  ].join(' ');
+  const totalContentLength = allInstructions.length + allIngredients.length;
+  
+  // Dynamically set initial font sizes based on content length
+  let titleFontSize = 20;
+  let headingFontSize = 14;
+  let textFontSize = 11;
+  
+  if (totalContentLength > 2000) {
+    titleFontSize = 18;
+    headingFontSize = 12;
+    textFontSize = 9;
+  } else if (totalContentLength > 1500) {
+    titleFontSize = 19;
+    headingFontSize = 13;
+    textFontSize = 10;
+  }
   
   // Add title
-  doc.setFontSize(24);
+  doc.setFontSize(titleFontSize);
   doc.setTextColor(126, 105, 171); // Purple color similar to wizard-accent
-  doc.text(recipe.title, 105, yPosition, { align: "center" });
-  yPosition += 15;
-
+  doc.text(recipe.title, pageWidth / 2, yPosition, { align: "center" });
+  yPosition += titleFontSize / 2;
+  
   // Add recipe type
-  doc.setFontSize(14);
-  doc.text(`Type: ${recipe.type === "sweet" ? "Sweet" : "Savory"} Pie`, leftMargin, yPosition);
-  yPosition += 10;
+  doc.setFontSize(headingFontSize);
+  doc.setTextColor(100, 100, 100);
+  doc.text(`Type: ${recipe.type === "sweet" ? "Sweet" : "Savory"} Pie`, contentMarginLeft, yPosition);
+  yPosition += headingFontSize / 2;
   
   // Add baking details
-  doc.setFontSize(16);
+  doc.setFontSize(headingFontSize);
   doc.setTextColor(100, 100, 100);
-  doc.text("Baking Details", leftMargin, yPosition);
-  yPosition += 8;
+  doc.text("Baking Details", contentMarginLeft, yPosition);
+  yPosition += headingFontSize / 2;
   
-  doc.setFontSize(12);
-  doc.text(`Temperature: ${recipe.bakingTemp}`, leftMargin + 5, yPosition);
-  yPosition += 7;
-  doc.text(`Time: ${recipe.bakingTime}`, leftMargin + 5, yPosition);
-  yPosition += 7;
-  doc.text(`Servings: ${recipe.servings}`, leftMargin + 5, yPosition);
-  yPosition += 12;
+  doc.setFontSize(textFontSize);
+  const bakingDetails = [
+    `Temperature: ${recipe.bakingTemp}`,
+    `Time: ${recipe.bakingTime}`,
+    `Servings: ${recipe.servings}`
+  ];
+  
+  bakingDetails.forEach(detail => {
+    doc.text(detail, contentMarginLeft + 5, yPosition);
+    yPosition += textFontSize / 1.5;
+  });
+  yPosition += textFontSize / 2;
   
   // Add ingredients section
-  doc.setFontSize(16);
+  doc.setFontSize(headingFontSize);
   doc.setTextColor(100, 100, 100);
-  doc.text("Ingredients", leftMargin, yPosition);
-  yPosition += 8;
+  doc.text("Ingredients", contentMarginLeft, yPosition);
+  yPosition += headingFontSize / 2;
   
   // For the crust
-  doc.setFontSize(14);
-  doc.text("For the Crust:", leftMargin, yPosition);
-  yPosition += 7;
+  doc.setFontSize(textFontSize + 1);
+  doc.text("For the Crust:", contentMarginLeft, yPosition);
+  yPosition += (textFontSize + 1) / 1.5;
   
-  // Add crust ingredients with proper line wrapping
-  doc.setFontSize(12);
+  // Add crust ingredients
+  doc.setFontSize(textFontSize);
   recipe.ingredients.crust.forEach((item) => {
-    // Check if line would exceed page width
-    const textLines = doc.splitTextToSize(`• ${item}`, maxWidth);
+    const textLines = doc.splitTextToSize(`• ${item}`, contentWidth - 10);
     textLines.forEach(line => {
-      // Check if we need a new page
-      if (yPosition > 270) {
-        doc.addPage();
-        yPosition = 20;
-      }
-      
-      doc.text(line, leftMargin + 5, yPosition);
-      yPosition += 6;
+      doc.text(line, contentMarginLeft + 5, yPosition);
+      yPosition += textFontSize / 1.5;
     });
   });
-  yPosition += 2;
+  yPosition += textFontSize / 3;
   
   // For the filling
-  doc.setFontSize(14);
-  // Check if we need a new page
-  if (yPosition > 260) {
-    doc.addPage();
-    yPosition = 20;
-  }
-  doc.text("For the Filling:", leftMargin, yPosition);
-  yPosition += 7;
+  doc.setFontSize(textFontSize + 1);
+  doc.text("For the Filling:", contentMarginLeft, yPosition);
+  yPosition += (textFontSize + 1) / 1.5;
   
-  // Add filling ingredients with proper line wrapping
-  doc.setFontSize(12);
+  // Add filling ingredients
+  doc.setFontSize(textFontSize);
   recipe.ingredients.filling.forEach((item) => {
-    // Check if line would exceed page width
-    const textLines = doc.splitTextToSize(`• ${item}`, maxWidth);
+    const textLines = doc.splitTextToSize(`• ${item}`, contentWidth - 10);
     textLines.forEach(line => {
-      // Check if we need a new page
-      if (yPosition > 270) {
-        doc.addPage();
-        yPosition = 20;
-      }
-      
-      doc.text(line, leftMargin + 5, yPosition);
-      yPosition += 6;
+      doc.text(line, contentMarginLeft + 5, yPosition);
+      yPosition += textFontSize / 1.5;
     });
   });
-  yPosition += 2;
+  yPosition += textFontSize / 3;
   
   // For the topping (if exists)
   if (recipe.ingredients.topping && recipe.ingredients.topping.length > 0) {
-    // Check if we need a new page
-    if (yPosition > 260) {
-      doc.addPage();
-      yPosition = 20;
-    }
+    doc.setFontSize(textFontSize + 1);
+    doc.text("For the Topping:", contentMarginLeft, yPosition);
+    yPosition += (textFontSize + 1) / 1.5;
     
-    doc.setFontSize(14);
-    doc.text("For the Topping:", leftMargin, yPosition);
-    yPosition += 7;
-    
-    // Add topping ingredients with proper line wrapping
-    doc.setFontSize(12);
+    // Add topping ingredients
+    doc.setFontSize(textFontSize);
     recipe.ingredients.topping.forEach((item) => {
-      // Check if line would exceed page width
-      const textLines = doc.splitTextToSize(`• ${item}`, maxWidth);
+      const textLines = doc.splitTextToSize(`• ${item}`, contentWidth - 10);
       textLines.forEach(line => {
-        // Check if we need a new page
-        if (yPosition > 270) {
-          doc.addPage();
-          yPosition = 20;
-        }
-        
-        doc.text(line, leftMargin + 5, yPosition);
-        yPosition += 6;
+        doc.text(line, contentMarginLeft + 5, yPosition);
+        yPosition += textFontSize / 1.5;
       });
     });
-    yPosition += 2;
+    yPosition += textFontSize / 3;
   }
+  
+  // Check if we need to reduce font size for instructions
+  const estimatedInstructionHeight = (recipe.instructions.length * textFontSize * 2); // Rough estimation
+  textFontSize = checkAndAdjustContent(recipe.instructions, estimatedInstructionHeight, textFontSize);
   
   // Add instructions section
-  // Check if we need a new page or if we're close to bottom
-  if (yPosition > 240) {
-    doc.addPage();
-    yPosition = 20;
-  }
-  
-  doc.setFontSize(16);
+  doc.setFontSize(headingFontSize);
   doc.setTextColor(100, 100, 100);
-  doc.text("Instructions", leftMargin, yPosition);
-  yPosition += 8;
+  doc.text("Instructions", contentMarginLeft, yPosition);
+  yPosition += headingFontSize / 2;
   
   // Add instructions with proper line wrapping and numbering
-  doc.setFontSize(12);
+  doc.setFontSize(textFontSize);
   recipe.instructions.forEach((instruction, index) => {
     const numberText = `${index + 1}. `;
     const instructionText = instruction;
     
     // Split long instructions into multiple lines
-    const textLines = doc.splitTextToSize(instructionText, maxWidth - 10);
-    
-    // Check if we need a new page before starting this instruction
-    if (yPosition > 270 - (textLines.length * 6)) {
-      doc.addPage();
-      yPosition = 20;
-    }
+    const textLines = doc.splitTextToSize(instructionText, contentWidth - 15);
     
     // Add the number
-    doc.text(numberText, leftMargin, yPosition);
+    doc.text(numberText, contentMarginLeft, yPosition);
     
     // Add the instruction text with proper indentation
     textLines.forEach((line, i) => {
       // First line goes next to the number, rest are indented
-      const xPosition = i === 0 ? leftMargin + 7 : leftMargin + 7;
+      const xPosition = i === 0 ? contentMarginLeft + 7 : contentMarginLeft + 7;
       doc.text(line, xPosition, yPosition);
-      yPosition += 6;
+      yPosition += textFontSize / 1.5;
     });
     
-    yPosition += 3; // Add space between instructions
+    yPosition += textFontSize / 5; // Add small space between instructions
   });
   
   // Collect all ingredients to find magical ones
-  const allIngredients = [
+  const allIngredientsList = [
     ...recipe.ingredients.crust,
     ...recipe.ingredients.filling,
     ...(recipe.ingredients.topping || [])
@@ -225,90 +247,100 @@ export const generatePDF = (recipe: PieRecipe): void => {
   // Find magical ingredients mentioned in the recipe
   const mentionedMagicalIngredients: string[] = [];
   magicalIngredientSubstitutions.forEach((realValue, magicalKey) => {
-    if (allIngredients.some(ingredient => 
+    if (allIngredientsList.some(ingredient => 
       ingredient.toLowerCase().includes(magicalKey.toLowerCase())
     )) {
       mentionedMagicalIngredients.push(`${magicalKey} → ${realValue}`);
     }
   });
   
-  // Add real world substitutions section if there are magical ingredients
+  // Check remaining space and adjust font size for substitutions if needed
+  let substitutionFontSize = textFontSize;
   if (mentionedMagicalIngredients.length > 0) {
-    yPosition += 5;
+    const estimatedSubstitutionHeight = mentionedMagicalIngredients.length * textFontSize;
+    const remainingSpace = pageHeight - contentMarginBottom - yPosition;
     
-    // Check if we need a new page
-    if (yPosition > 250) {
-      doc.addPage();
-      yPosition = 20;
+    if (estimatedSubstitutionHeight > remainingSpace) {
+      substitutionFontSize = Math.max(8, textFontSize - 1);
     }
     
-    doc.setFontSize(16);
-    doc.setTextColor(126, 105, 171);
-    doc.text("Real World Substitutions", leftMargin, yPosition);
-    yPosition += 8;
+    yPosition += textFontSize / 2;
     
-    doc.setFontSize(12);
+    doc.setFontSize(headingFontSize);
+    doc.setTextColor(126, 105, 171);
+    doc.text("Real World Substitutions", contentMarginLeft, yPosition);
+    yPosition += headingFontSize / 2;
+    
+    doc.setFontSize(substitutionFontSize);
     doc.setTextColor(100, 100, 100);
     const introText = "To make this pie in the non-magical world, use these substitutions:";
-    const introLines = doc.splitTextToSize(introText, maxWidth);
+    const introLines = doc.splitTextToSize(introText, contentWidth);
     introLines.forEach(line => {
-      doc.text(line, leftMargin, yPosition);
-      yPosition += 6;
+      doc.text(line, contentMarginLeft, yPosition);
+      yPosition += substitutionFontSize / 1.5;
     });
-    yPosition += 2;
     
-    // Add each magical ingredient substitution
-    mentionedMagicalIngredients.forEach(substitution => {
-      // Check if we need a new page
-      if (yPosition > 270) {
-        doc.addPage();
-        yPosition = 20;
-      }
+    // Add substitutions in multiple columns if there are many
+    if (mentionedMagicalIngredients.length > 5) {
+      const column1 = mentionedMagicalIngredients.slice(0, Math.ceil(mentionedMagicalIngredients.length / 2));
+      const column2 = mentionedMagicalIngredients.slice(Math.ceil(mentionedMagicalIngredients.length / 2));
+      const columnWidth = (contentWidth - 10) / 2;
       
-      const substitutionLines = doc.splitTextToSize(`• ${substitution}`, maxWidth);
-      substitutionLines.forEach(line => {
-        doc.text(line, leftMargin, yPosition);
-        yPosition += 6;
+      let col1Y = yPosition;
+      let col2Y = yPosition;
+      
+      column1.forEach(sub => {
+        const subLines = doc.splitTextToSize(`• ${sub}`, columnWidth);
+        subLines.forEach(line => {
+          doc.text(line, contentMarginLeft, col1Y);
+          col1Y += substitutionFontSize / 1.5;
+        });
       });
-    });
-    
-    yPosition += 5;
+      
+      column2.forEach(sub => {
+        const subLines = doc.splitTextToSize(`• ${sub}`, columnWidth);
+        subLines.forEach(line => {
+          doc.text(line, contentMarginLeft + columnWidth + 10, col2Y);
+          col2Y += substitutionFontSize / 1.5;
+        });
+      });
+      
+      yPosition = Math.max(col1Y, col2Y);
+    } else {
+      // Single column for fewer substitutions
+      mentionedMagicalIngredients.forEach(substitution => {
+        const substitutionLines = doc.splitTextToSize(`• ${substitution}`, contentWidth);
+        substitutionLines.forEach(line => {
+          doc.text(line, contentMarginLeft, yPosition);
+          yPosition += substitutionFontSize / 1.5;
+        });
+      });
+    }
   } else {
     // Add a general note about magical ingredients if no specific magical ingredients found
-    yPosition += 5;
-    doc.setFontSize(14);
+    yPosition += textFontSize / 2;
+    doc.setFontSize(textFontSize);
     doc.setTextColor(126, 105, 171);
+    doc.text("Note on Magical Ingredients:", contentMarginLeft, yPosition);
+    yPosition += textFontSize / 1.5;
     
-    // Check if we need a new page
-    if (yPosition > 250) {
-      doc.addPage();
-      yPosition = 20;
-    }
-    
-    doc.text("Note on Magical Ingredients:", leftMargin, yPosition);
-    yPosition += 7;
-    
-    doc.setFontSize(12);
+    doc.setFontSize(textFontSize);
     doc.setTextColor(100, 100, 100);
     const magicNote = "Any magical ingredients can be replaced with their non-magical counterparts while maintaining the same measurements for a delicious real-world version of this magical pie.";
     
-    const noteLines = doc.splitTextToSize(magicNote, maxWidth);
+    const noteLines = doc.splitTextToSize(magicNote, contentWidth);
     noteLines.forEach(line => {
-      doc.text(line, leftMargin, yPosition);
-      yPosition += 6;
+      doc.text(line, contentMarginLeft, yPosition);
+      yPosition += textFontSize / 1.5;
     });
   }
   
-  // Add footer
-  const pageCount = doc.getNumberOfPages();
-  for (let i = 1; i <= pageCount; i++) {
-    doc.setPage(i);
-    doc.setFontSize(10);
-    doc.setTextColor(150, 150, 150);
-    doc.text('Magical Pie Recipe Generator', 105, 290, { align: "center" });
-    doc.text(`Page ${i} of ${pageCount}`, 195, 290, { align: "right" });
-  }
+  // Add footer text
+  doc.setFontSize(9);
+  doc.setTextColor(150, 150, 150);
+  doc.text('Magical Pie Recipe Generator', pageWidth / 2, pageHeight - 20, { align: "center" });
   
   // Download the PDF
   doc.save(`${recipe.title.replace(/\s+/g, '_').toLowerCase()}_recipe.pdf`);
 };
+
