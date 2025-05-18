@@ -142,13 +142,13 @@ export const generatePDF = (recipe: PieRecipe): void => {
   doc.setFontSize(titleFontSize);
   doc.setTextColor(126, 105, 171); // Purple color similar to wizard-accent
   doc.text(recipe.title, pageWidth / 2, yPosition, { align: "center" });
-  yPosition += titleFontSize / 2 + 3;
+  yPosition += titleFontSize / 2 + 2; // Reduced spacing after title
   
   // Add recipe type
   doc.setFontSize(headingFontSize);
   doc.setTextColor(80, 80, 80);
   doc.text(`${recipe.type === "sweet" ? "Sweet" : "Savory"} Pie`, pageWidth / 2, yPosition, { align: "center" });
-  yPosition += headingFontSize / 2 + 4;
+  yPosition += headingFontSize / 2 + 3; // Reduced spacing after type
   
   // --- OPTIMIZE BAKING DETAILS SECTION ---
   // Use horizontal layout for baking details to save vertical space
@@ -162,7 +162,7 @@ export const generatePDF = (recipe: PieRecipe): void => {
   doc.text(`Temp: ${recipe.bakingTemp}`, contentMarginLeft, yPosition);
   doc.text(`Time: ${recipe.bakingTime}`, contentMarginLeft + bakingDetailsWidth, yPosition);
   doc.text(`Servings: ${recipe.servings}`, contentMarginLeft + bakingDetailsWidth * 2, yPosition);
-  yPosition += bakingDetailsFontSize + 6;
+  yPosition += bakingDetailsFontSize + 4; // Reduced spacing after baking details
   
   // --- OPTIMIZE INGREDIENTS SECTION ---
   // Determine if we should use multi-column layout for ingredients based on count
@@ -179,7 +179,7 @@ export const generatePDF = (recipe: PieRecipe): void => {
   doc.setFontSize(headingFontSize);
   doc.setTextColor(80, 80, 80);
   doc.text("Ingredients", contentMarginLeft, yPosition);
-  yPosition += headingFontSize / 2 + 2;
+  yPosition += headingFontSize / 2 + 1; // Reduced spacing after ingredients heading
   
   // Start position for ingredients columns
   let leftColY = yPosition;
@@ -194,7 +194,7 @@ export const generatePDF = (recipe: PieRecipe): void => {
     doc.setFontSize(subheadingFontSize);
     doc.setTextColor(60, 60, 60);
     doc.text(sectionTitle, currentX, currentY);
-    currentY += subheadingFontSize + 1;
+    currentY += subheadingFontSize / 2 + 1; // Reduced spacing after section title
     
     // Add ingredients with abbreviated measurements
     doc.setFontSize(textFontSize);
@@ -204,14 +204,14 @@ export const generatePDF = (recipe: PieRecipe): void => {
       const textLines = doc.splitTextToSize(`• ${abbreviatedItem}`, columnWidth - 5);
       textLines.forEach(line => {
         doc.text(line, currentX, currentY);
-        currentY += textFontSize + 0.5;
+        currentY += textFontSize * 0.9; // Single spacing - reduced line height
       });
     });
     
     if (startingColumn === 'left') {
-      leftColY = currentY + 2;
+      leftColY = currentY + 1; // Reduced space between sections
     } else {
-      rightColY = currentY + 2;
+      rightColY = currentY + 1; // Reduced space between sections
     }
   };
   
@@ -233,7 +233,7 @@ export const generatePDF = (recipe: PieRecipe): void => {
         processIngredientSection("For the Filling:", recipe.ingredients.filling, 'right');
         
         if (recipe.ingredients.topping && recipe.ingredients.topping.length > 0) {
-          rightColY += 2;
+          rightColY += 1; // Reduced spacing before topping section
           processIngredientSection("For the Topping:", recipe.ingredients.topping, 'right');
         }
       }
@@ -243,7 +243,7 @@ export const generatePDF = (recipe: PieRecipe): void => {
       processIngredientSection("For the Filling:", recipe.ingredients.filling, 'right');
       
       if (recipe.ingredients.topping && recipe.ingredients.topping.length > 0) {
-        rightColY += 2;
+        rightColY += 1; // Reduced spacing before topping section
         processIngredientSection("For the Topping:", recipe.ingredients.topping, 'right');
       }
     }
@@ -258,12 +258,12 @@ export const generatePDF = (recipe: PieRecipe): void => {
   }
   
   // Update y position to the maximum of both columns
-  yPosition = Math.max(leftColY, rightColY) + 2;
+  yPosition = Math.max(leftColY, rightColY) + 1; // Reduced spacing after ingredients
   
   // --- OPTIMIZE INSTRUCTIONS SECTION ---
   // Determine if instructions need two columns based on count and remaining space
   const remainingSpace = pageHeight - contentMarginBottom - yPosition;
-  const estimatedInstructionHeight = recipe.instructions.length * (textFontSize + 2);
+  const estimatedInstructionHeight = recipe.instructions.length * (textFontSize * 0.9); // Reduced line height estimate
   const useMultiColumnInstructions = 
     recipe.instructions.length > 10 || 
     estimatedInstructionHeight > remainingSpace;
@@ -278,7 +278,7 @@ export const generatePDF = (recipe: PieRecipe): void => {
   doc.setFontSize(headingFontSize);
   doc.setTextColor(80, 80, 80);
   doc.text("Instructions", contentMarginLeft, yPosition);
-  yPosition += headingFontSize / 2 + 2;
+  yPosition += headingFontSize / 2 + 1; // Reduced spacing after instructions heading
   
   // Process instructions
   doc.setFontSize(instructionFontSize);
@@ -308,10 +308,10 @@ export const generatePDF = (recipe: PieRecipe): void => {
       textLines.forEach((line, i) => {
         const xPosition = i === 0 ? contentMarginLeft + 5 : contentMarginLeft + 5;
         doc.text(line, xPosition, leftInstrY);
-        leftInstrY += instructionFontSize + 0.5;
+        leftInstrY += instructionFontSize * 0.9; // Single spacing - reduced line height
       });
       
-      leftInstrY += 1; // Add small space between instructions
+      leftInstrY += 0.5; // Reduced space between instructions
     });
     
     // Process right column
@@ -329,13 +329,13 @@ export const generatePDF = (recipe: PieRecipe): void => {
       textLines.forEach((line, i) => {
         const xPosition = i === 0 ? contentMarginLeft + columnWidth + 10 : contentMarginLeft + columnWidth + 10;
         doc.text(line, xPosition, rightInstrY);
-        rightInstrY += instructionFontSize + 0.5;
+        rightInstrY += instructionFontSize * 0.9; // Single spacing - reduced line height
       });
       
-      rightInstrY += 1; // Add small space between instructions
+      rightInstrY += 0.5; // Reduced space between instructions
     });
     
-    yPosition = Math.max(leftInstrY, rightInstrY) + 2;
+    yPosition = Math.max(leftInstrY, rightInstrY) + 1; // Reduced spacing after instructions
   } else {
     // Single column layout for instructions
     recipe.instructions.forEach((instruction, index) => {
@@ -352,10 +352,10 @@ export const generatePDF = (recipe: PieRecipe): void => {
       textLines.forEach((line, i) => {
         const xPosition = i === 0 ? contentMarginLeft + 5 : contentMarginLeft + 5;
         doc.text(line, xPosition, yPosition);
-        yPosition += instructionFontSize + 0.5;
+        yPosition += instructionFontSize * 0.9; // Single spacing - reduced line height
       });
       
-      yPosition += 1; // Add small space between instructions
+      yPosition += 0.5; // Reduced space between instructions
     });
   }
   
@@ -379,7 +379,7 @@ export const generatePDF = (recipe: PieRecipe): void => {
   
   // Check if we have enough space for substitutions
   const remainingHeightAfterInstructions = pageHeight - contentMarginBottom - yPosition;
-  const expectedSubstitutionHeight = mentionedMagicalIngredients.length * (textFontSize + 1) + 15;
+  const expectedSubstitutionHeight = mentionedMagicalIngredients.length * (textFontSize * 0.9) + 12; // Reduced height estimate
   
   // Only add substitutions if we have magical ingredients and enough space
   if (mentionedMagicalIngredients.length > 0 && remainingHeightAfterInstructions > 20) {
@@ -390,12 +390,12 @@ export const generatePDF = (recipe: PieRecipe): void => {
       substitutionFontSize = Math.max(6, substitutionFontSize - 0.5);
     }
     
-    yPosition += 3;
+    yPosition += 2; // Reduced spacing before substitutions section
     
     doc.setFontSize(Math.min(subheadingFontSize, 10));
     doc.setTextColor(126, 105, 171); // Purple for magical content
     doc.text("Real World Substitutions", contentMarginLeft, yPosition);
-    yPosition += Math.min(subheadingFontSize, 10) + 1;
+    yPosition += Math.min(subheadingFontSize, 10) / 2 + 1; // Reduced spacing after substitutions heading
     
     doc.setFontSize(substitutionFontSize);
     doc.setTextColor(80, 80, 80);
@@ -414,7 +414,7 @@ export const generatePDF = (recipe: PieRecipe): void => {
         const subLines = doc.splitTextToSize(`• ${sub}`, subColumnWidth);
         subLines.forEach(line => {
           doc.text(line, contentMarginLeft, col1Y);
-          col1Y += substitutionFontSize + 0.5;
+          col1Y += substitutionFontSize * 0.9; // Single spacing
         });
       });
       
@@ -422,7 +422,7 @@ export const generatePDF = (recipe: PieRecipe): void => {
         const subLines = doc.splitTextToSize(`• ${sub}`, subColumnWidth);
         subLines.forEach(line => {
           doc.text(line, contentMarginLeft + subColumnWidth + 5, col2Y);
-          col2Y += substitutionFontSize + 0.5;
+          col2Y += substitutionFontSize * 0.9; // Single spacing
         });
       });
       
@@ -433,7 +433,7 @@ export const generatePDF = (recipe: PieRecipe): void => {
         const substitutionLines = doc.splitTextToSize(`• ${substitution}`, contentWidth - 10);
         substitutionLines.forEach(line => {
           doc.text(line, contentMarginLeft + 5, yPosition);
-          yPosition += substitutionFontSize + 0.5;
+          yPosition += substitutionFontSize * 0.9; // Single spacing
         });
       });
     }
