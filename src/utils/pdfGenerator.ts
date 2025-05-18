@@ -48,6 +48,23 @@ const magicalIngredientSubstitutions = new Map([
   ["wizard's herb blend", "Italian herb blend"]
 ]);
 
+// Helper function to abbreviate common measurement terms
+const abbreviateMeasurements = (text: string): string => {
+  return text
+    .replace(/tablespoon(s)?/gi, 'tbsp')
+    .replace(/teaspoon(s)?/gi, 'tsp')
+    .replace(/pound(s)?/gi, 'lb')
+    .replace(/ounce(s)?/gi, 'oz')
+    .replace(/cup(s)?/gi, 'c.')
+    .replace(/gallon(s)?/gi, 'gal')
+    .replace(/quart(s)?/gi, 'qt')
+    .replace(/pint(s)?/gi, 'pt')
+    .replace(/gram(s)?/gi, 'g')
+    .replace(/kilogram(s)?/gi, 'kg')
+    .replace(/milliliter(s)?/gi, 'ml')
+    .replace(/liter(s)?/gi, 'L');
+};
+
 export const generatePDF = (recipe: PieRecipe): void => {
   // Create new PDF document
   const doc = new jsPDF({
@@ -75,20 +92,12 @@ export const generatePDF = (recipe: PieRecipe): void => {
   doc.setFillColor(254, 222, 180); // #FEDEB4 - Pale peach color to match image
   doc.rect(rectX, rectY, rectWidth, rectHeight, 'F');
   
-  // Add wizard image in bottom right corner
-  // This would use an image, but we'll leave space for it
-  const wizardWidth = 100; // Width of the space to reserve for wizard
-  const wizardHeight = 100; // Height of space to reserve for wizard
-  
   // Content margins (inside the yellow rectangle)
-  const contentMarginLeft = 30;
-  const contentMarginRight = 30;
-  const contentMarginTop = 35;
-  const contentMarginBottom = 80; // Leave space for wizard image and website
+  const contentMarginLeft = 25;
+  const contentMarginRight = 25;
+  const contentMarginTop = 30;
+  const contentMarginBottom = 35;
   const contentWidth = pageWidth - contentMarginLeft - contentMarginRight;
-  
-  // Start position for content
-  let yPosition = contentMarginTop;
   
   // Calculate total content length to estimate space needs
   const allInstructions = recipe.instructions.join(' ');
@@ -98,166 +107,259 @@ export const generatePDF = (recipe: PieRecipe): void => {
     ...(recipe.ingredients.topping || [])
   ].join(' ');
   const totalContentLength = allInstructions.length + allIngredients.length;
+  const totalIngredientsCount = recipe.ingredients.crust.length + 
+                              recipe.ingredients.filling.length + 
+                              (recipe.ingredients.topping?.length || 0);
   
-  // Dynamically set initial font sizes based on content length
-  let titleFontSize = 18;
-  let headingFontSize = 14;
-  let textFontSize = 11;
+  // Dynamically set initial font sizes based on content length and count
+  let titleFontSize = 16;
+  let headingFontSize = 12;
+  let subheadingFontSize = 10;
+  let textFontSize = 9;
   
-  // Adjust font sizes based on content length to ensure fit on one page
-  if (totalContentLength > 2500) {
-    titleFontSize = 16;
+  // More aggressive font size reduction based on content length and ingredient count
+  if (totalContentLength > 3000 || totalIngredientsCount > 20 || recipe.instructions.length > 15) {
+    titleFontSize = 14;
+    headingFontSize = 10;
+    subheadingFontSize = 8;
+    textFontSize = 7;
+  } else if (totalContentLength > 2500 || totalIngredientsCount > 15 || recipe.instructions.length > 12) {
+    titleFontSize = 15;
     headingFontSize = 11;
+    subheadingFontSize = 9;
     textFontSize = 8;
-  } else if (totalContentLength > 2000) {
-    titleFontSize = 17;
+  } else if (totalContentLength > 2000 || totalIngredientsCount > 12 || recipe.instructions.length > 10) {
+    titleFontSize = 16;
     headingFontSize = 12;
+    subheadingFontSize = 10;
     textFontSize = 9;
-  } else if (totalContentLength > 1500) {
-    titleFontSize = 18;
-    headingFontSize = 13;
-    textFontSize = 10;
   }
   
-  // Further reduce font size if we have many instructions or ingredients
-  if (recipe.instructions.length > 10 || allIngredients.length > 15) {
-    titleFontSize -= 1;
-    headingFontSize -= 1;
-    textFontSize -= 1;
-  }
+  // Start position for content
+  let yPosition = contentMarginTop;
   
   // Add title
   doc.setFontSize(titleFontSize);
   doc.setTextColor(126, 105, 171); // Purple color similar to wizard-accent
   doc.text(recipe.title, pageWidth / 2, yPosition, { align: "center" });
-  yPosition += titleFontSize / 2 + 5;
+  yPosition += titleFontSize / 2 + 3;
   
   // Add recipe type
   doc.setFontSize(headingFontSize);
   doc.setTextColor(80, 80, 80);
   doc.text(`${recipe.type === "sweet" ? "Sweet" : "Savory"} Pie`, pageWidth / 2, yPosition, { align: "center" });
-  yPosition += headingFontSize + 6;
+  yPosition += headingFontSize / 2 + 4;
   
-  // Add baking details
-  doc.setFontSize(headingFontSize);
+  // --- OPTIMIZE BAKING DETAILS SECTION ---
+  // Use horizontal layout for baking details to save vertical space
+  const bakingDetailsFontSize = Math.max(7, textFontSize - 0.5);
+  doc.setFontSize(bakingDetailsFontSize);
   doc.setTextColor(80, 80, 80);
-  doc.text("Baking Details", contentMarginLeft, yPosition);
-  yPosition += headingFontSize / 2 + 3;
   
-  doc.setFontSize(textFontSize);
-  const bakingDetails = [
-    `Temperature: ${recipe.bakingTemp}`,
-    `Time: ${recipe.bakingTime}`,
-    `Servings: ${recipe.servings}`
-  ];
+  // Calculate widths for each baking detail item
+  const bakingDetailsWidth = contentWidth / 3;
   
-  bakingDetails.forEach(detail => {
-    doc.text(detail, contentMarginLeft + 5, yPosition);
-    yPosition += textFontSize + 2;
-  });
-  yPosition += 5;
+  doc.text(`Temp: ${recipe.bakingTemp}`, contentMarginLeft, yPosition);
+  doc.text(`Time: ${recipe.bakingTime}`, contentMarginLeft + bakingDetailsWidth, yPosition);
+  doc.text(`Servings: ${recipe.servings}`, contentMarginLeft + bakingDetailsWidth * 2, yPosition);
+  yPosition += bakingDetailsFontSize + 6;
   
-  // Add ingredients section
+  // --- OPTIMIZE INGREDIENTS SECTION ---
+  // Determine if we should use multi-column layout for ingredients based on count
+  const useMultiColumnIngredients = totalIngredientsCount > 10;
+  let columnWidth = contentWidth;
+  let midPoint = Math.ceil(totalIngredientsCount / 2);
+  let ingredientCount = 0;
+  
+  if (useMultiColumnIngredients) {
+    columnWidth = (contentWidth - 10) / 2;
+  }
+  
+  // Add ingredients heading
   doc.setFontSize(headingFontSize);
   doc.setTextColor(80, 80, 80);
   doc.text("Ingredients", contentMarginLeft, yPosition);
-  yPosition += headingFontSize / 2 + 4;
+  yPosition += headingFontSize / 2 + 2;
   
-  // For the crust
-  doc.setFontSize(textFontSize + 1);
-  doc.setTextColor(60, 60, 60);
-  doc.text("For the Crust:", contentMarginLeft, yPosition);
-  yPosition += (textFontSize + 1) + 2;
+  // Start position for ingredients columns
+  let leftColY = yPosition;
+  let rightColY = yPosition;
   
-  // Add crust ingredients
-  doc.setFontSize(textFontSize);
-  doc.setTextColor(80, 80, 80);
-  recipe.ingredients.crust.forEach((item) => {
-    const textLines = doc.splitTextToSize(`• ${item}`, contentWidth - 10);
-    textLines.forEach(line => {
-      doc.text(line, contentMarginLeft + 5, yPosition);
-      yPosition += textFontSize + 1;
-    });
-  });
-  yPosition += 3;
-  
-  // For the filling
-  doc.setFontSize(textFontSize + 1);
-  doc.setTextColor(60, 60, 60);
-  doc.text("For the Filling:", contentMarginLeft, yPosition);
-  yPosition += (textFontSize + 1) + 2;
-  
-  // Add filling ingredients
-  doc.setFontSize(textFontSize);
-  doc.setTextColor(80, 80, 80);
-  recipe.ingredients.filling.forEach((item) => {
-    const textLines = doc.splitTextToSize(`• ${item}`, contentWidth - 10);
-    textLines.forEach(line => {
-      doc.text(line, contentMarginLeft + 5, yPosition);
-      yPosition += textFontSize + 1;
-    });
-  });
-  yPosition += 3;
-  
-  // For the topping (if exists)
-  if (recipe.ingredients.topping && recipe.ingredients.topping.length > 0) {
-    doc.setFontSize(textFontSize + 1);
-    doc.setTextColor(60, 60, 60);
-    doc.text("For the Topping:", contentMarginLeft, yPosition);
-    yPosition += (textFontSize + 1) + 2;
+  // Process each ingredient section
+  const processIngredientSection = (sectionTitle: string, ingredients: string[], startingColumn: 'left' | 'right' = 'left') => {
+    let currentY = startingColumn === 'left' ? leftColY : rightColY;
+    const currentX = startingColumn === 'left' ? contentMarginLeft : contentMarginLeft + columnWidth + 5;
     
-    // Add topping ingredients
+    // Add section title
+    doc.setFontSize(subheadingFontSize);
+    doc.setTextColor(60, 60, 60);
+    doc.text(sectionTitle, currentX, currentY);
+    currentY += subheadingFontSize + 1;
+    
+    // Add ingredients with abbreviated measurements
     doc.setFontSize(textFontSize);
     doc.setTextColor(80, 80, 80);
-    recipe.ingredients.topping.forEach((item) => {
-      const textLines = doc.splitTextToSize(`• ${item}`, contentWidth - 10);
+    ingredients.forEach((item) => {
+      const abbreviatedItem = abbreviateMeasurements(item);
+      const textLines = doc.splitTextToSize(`• ${abbreviatedItem}`, columnWidth - 5);
       textLines.forEach(line => {
-        doc.text(line, contentMarginLeft + 5, yPosition);
-        yPosition += textFontSize + 1;
+        doc.text(line, currentX, currentY);
+        currentY += textFontSize + 0.5;
       });
     });
-    yPosition += 3;
+    
+    if (startingColumn === 'left') {
+      leftColY = currentY + 2;
+    } else {
+      rightColY = currentY + 2;
+    }
+  };
+  
+  // For the crust
+  if (useMultiColumnIngredients) {
+    // Determine which sections go in which column
+    if (recipe.ingredients.crust.length < midPoint) {
+      processIngredientSection("For the Crust:", recipe.ingredients.crust, 'left');
+      ingredientCount += recipe.ingredients.crust.length;
+      
+      if (ingredientCount < midPoint) {
+        processIngredientSection("For the Filling:", recipe.ingredients.filling, 'left');
+        ingredientCount += recipe.ingredients.filling.length;
+        
+        if (recipe.ingredients.topping && recipe.ingredients.topping.length > 0) {
+          processIngredientSection("For the Topping:", recipe.ingredients.topping, 'right');
+        }
+      } else {
+        processIngredientSection("For the Filling:", recipe.ingredients.filling, 'right');
+        
+        if (recipe.ingredients.topping && recipe.ingredients.topping.length > 0) {
+          rightColY += 2;
+          processIngredientSection("For the Topping:", recipe.ingredients.topping, 'right');
+        }
+      }
+    } else {
+      // Crust is larger than half, so put filling and topping in right column
+      processIngredientSection("For the Crust:", recipe.ingredients.crust, 'left');
+      processIngredientSection("For the Filling:", recipe.ingredients.filling, 'right');
+      
+      if (recipe.ingredients.topping && recipe.ingredients.topping.length > 0) {
+        rightColY += 2;
+        processIngredientSection("For the Topping:", recipe.ingredients.topping, 'right');
+      }
+    }
+  } else {
+    // Single column layout
+    processIngredientSection("For the Crust:", recipe.ingredients.crust);
+    processIngredientSection("For the Filling:", recipe.ingredients.filling);
+    
+    if (recipe.ingredients.topping && recipe.ingredients.topping.length > 0) {
+      processIngredientSection("For the Topping:", recipe.ingredients.topping);
+    }
   }
   
-  // Add instructions section
-  // Check remaining space and adjust font size if needed
+  // Update y position to the maximum of both columns
+  yPosition = Math.max(leftColY, rightColY) + 2;
+  
+  // --- OPTIMIZE INSTRUCTIONS SECTION ---
+  // Determine if instructions need two columns based on count and remaining space
   const remainingSpace = pageHeight - contentMarginBottom - yPosition;
-  const estimatedInstructionHeight = (recipe.instructions.length * (textFontSize + 2));
+  const estimatedInstructionHeight = recipe.instructions.length * (textFontSize + 2);
+  const useMultiColumnInstructions = 
+    recipe.instructions.length > 10 || 
+    estimatedInstructionHeight > remainingSpace;
   
+  // Adjust instruction font size if needed
+  let instructionFontSize = textFontSize;
   if (estimatedInstructionHeight > remainingSpace) {
-    // Reduce font size for instructions to fit
-    textFontSize = Math.max(7, textFontSize - 1);
+    instructionFontSize = Math.max(6.5, textFontSize - 1);
   }
   
+  // Add instructions heading
   doc.setFontSize(headingFontSize);
   doc.setTextColor(80, 80, 80);
   doc.text("Instructions", contentMarginLeft, yPosition);
-  yPosition += headingFontSize / 2 + 4;
+  yPosition += headingFontSize / 2 + 2;
   
-  // Add instructions with proper line wrapping and numbering
-  doc.setFontSize(textFontSize);
+  // Process instructions
+  doc.setFontSize(instructionFontSize);
   doc.setTextColor(80, 80, 80);
-  recipe.instructions.forEach((instruction, index) => {
-    const numberText = `${index + 1}. `;
-    const instructionText = instruction;
+  
+  if (useMultiColumnInstructions) {
+    // Two-column layout for instructions
+    const midInstructionPoint = Math.ceil(recipe.instructions.length / 2);
+    const leftInstructions = recipe.instructions.slice(0, midInstructionPoint);
+    const rightInstructions = recipe.instructions.slice(midInstructionPoint);
     
-    // Split long instructions into multiple lines
-    const textLines = doc.splitTextToSize(instructionText, contentWidth - 15);
+    let leftInstrY = yPosition;
+    let rightInstrY = yPosition;
     
-    // Add the number
-    doc.text(numberText, contentMarginLeft, yPosition);
-    
-    // Add the instruction text with proper indentation
-    textLines.forEach((line, i) => {
-      // First line goes next to the number, rest are indented
-      const xPosition = i === 0 ? contentMarginLeft + 7 : contentMarginLeft + 7;
-      doc.text(line, xPosition, yPosition);
-      yPosition += textFontSize + 1;
+    // Process left column
+    leftInstructions.forEach((instruction, index) => {
+      // Abbreviate and condense where possible
+      const condensedInstruction = abbreviateMeasurements(instruction);
+      
+      const numberText = `${index + 1}. `;
+      const textLines = doc.splitTextToSize(condensedInstruction, columnWidth - 10);
+      
+      // Add the number
+      doc.text(numberText, contentMarginLeft, leftInstrY);
+      
+      // Add the instruction text with proper indentation
+      textLines.forEach((line, i) => {
+        const xPosition = i === 0 ? contentMarginLeft + 5 : contentMarginLeft + 5;
+        doc.text(line, xPosition, leftInstrY);
+        leftInstrY += instructionFontSize + 0.5;
+      });
+      
+      leftInstrY += 1; // Add small space between instructions
     });
     
-    yPosition += 2; // Add small space between instructions
-  });
+    // Process right column
+    rightInstructions.forEach((instruction, index) => {
+      // Abbreviate and condense where possible
+      const condensedInstruction = abbreviateMeasurements(instruction);
+      
+      const numberText = `${index + midInstructionPoint + 1}. `;
+      const textLines = doc.splitTextToSize(condensedInstruction, columnWidth - 10);
+      
+      // Add the number
+      doc.text(numberText, contentMarginLeft + columnWidth + 5, rightInstrY);
+      
+      // Add the instruction text with proper indentation
+      textLines.forEach((line, i) => {
+        const xPosition = i === 0 ? contentMarginLeft + columnWidth + 10 : contentMarginLeft + columnWidth + 10;
+        doc.text(line, xPosition, rightInstrY);
+        rightInstrY += instructionFontSize + 0.5;
+      });
+      
+      rightInstrY += 1; // Add small space between instructions
+    });
+    
+    yPosition = Math.max(leftInstrY, rightInstrY) + 2;
+  } else {
+    // Single column layout for instructions
+    recipe.instructions.forEach((instruction, index) => {
+      // Abbreviate and condense where possible
+      const condensedInstruction = abbreviateMeasurements(instruction);
+      
+      const numberText = `${index + 1}. `;
+      const textLines = doc.splitTextToSize(condensedInstruction, contentWidth - 10);
+      
+      // Add the number
+      doc.text(numberText, contentMarginLeft, yPosition);
+      
+      // Add the instruction text with proper indentation
+      textLines.forEach((line, i) => {
+        const xPosition = i === 0 ? contentMarginLeft + 5 : contentMarginLeft + 5;
+        doc.text(line, xPosition, yPosition);
+        yPosition += instructionFontSize + 0.5;
+      });
+      
+      yPosition += 1; // Add small space between instructions
+    });
+  }
   
+  // --- OPTIMIZE SUBSTITUTIONS SECTION ---
   // Collect all ingredients to find magical ones
   const allIngredientsList = [
     ...recipe.ingredients.crust,
@@ -275,51 +377,52 @@ export const generatePDF = (recipe: PieRecipe): void => {
     }
   });
   
-  // Check remaining space again
-  const spaceLeft = pageHeight - contentMarginBottom - yPosition;
+  // Check if we have enough space for substitutions
+  const remainingHeightAfterInstructions = pageHeight - contentMarginBottom - yPosition;
+  const expectedSubstitutionHeight = mentionedMagicalIngredients.length * (textFontSize + 1) + 15;
   
   // Only add substitutions if we have magical ingredients and enough space
-  if (mentionedMagicalIngredients.length > 0 && spaceLeft > 30) {
+  if (mentionedMagicalIngredients.length > 0 && remainingHeightAfterInstructions > 20) {
     // Adjust font size for substitutions based on remaining space
-    let substitutionFontSize = Math.min(textFontSize, 9);
+    let substitutionFontSize = Math.max(6.5, textFontSize - 0.5);
     
-    if (spaceLeft < 50 && mentionedMagicalIngredients.length > 3) {
-      substitutionFontSize = Math.max(7, substitutionFontSize - 1);
+    if (expectedSubstitutionHeight > remainingHeightAfterInstructions) {
+      substitutionFontSize = Math.max(6, substitutionFontSize - 0.5);
     }
     
-    yPosition += 5;
+    yPosition += 3;
     
-    doc.setFontSize(Math.min(headingFontSize, 12));
+    doc.setFontSize(Math.min(subheadingFontSize, 10));
     doc.setTextColor(126, 105, 171); // Purple for magical content
     doc.text("Real World Substitutions", contentMarginLeft, yPosition);
-    yPosition += Math.min(headingFontSize, 12) + 2;
+    yPosition += Math.min(subheadingFontSize, 10) + 1;
     
     doc.setFontSize(substitutionFontSize);
     doc.setTextColor(80, 80, 80);
     
     // Determine whether to use multiple columns based on count and space
-    if (mentionedMagicalIngredients.length > 6 && contentWidth > 100) {
+    if (mentionedMagicalIngredients.length > 4 && remainingHeightAfterInstructions < 40) {
       // Use two columns for many substitutions
+      const subColumnWidth = (contentWidth - 10) / 2;
       const column1 = mentionedMagicalIngredients.slice(0, Math.ceil(mentionedMagicalIngredients.length / 2));
       const column2 = mentionedMagicalIngredients.slice(Math.ceil(mentionedMagicalIngredients.length / 2));
-      const columnWidth = (contentWidth - 20) / 2;
       
       let col1Y = yPosition;
       let col2Y = yPosition;
       
       column1.forEach(sub => {
-        const subLines = doc.splitTextToSize(`• ${sub}`, columnWidth);
+        const subLines = doc.splitTextToSize(`• ${sub}`, subColumnWidth);
         subLines.forEach(line => {
           doc.text(line, contentMarginLeft, col1Y);
-          col1Y += substitutionFontSize + 1;
+          col1Y += substitutionFontSize + 0.5;
         });
       });
       
       column2.forEach(sub => {
-        const subLines = doc.splitTextToSize(`• ${sub}`, columnWidth);
+        const subLines = doc.splitTextToSize(`• ${sub}`, subColumnWidth);
         subLines.forEach(line => {
-          doc.text(line, contentMarginLeft + columnWidth + 10, col2Y);
-          col2Y += substitutionFontSize + 1;
+          doc.text(line, contentMarginLeft + subColumnWidth + 5, col2Y);
+          col2Y += substitutionFontSize + 0.5;
         });
       });
       
@@ -330,7 +433,7 @@ export const generatePDF = (recipe: PieRecipe): void => {
         const substitutionLines = doc.splitTextToSize(`• ${substitution}`, contentWidth - 10);
         substitutionLines.forEach(line => {
           doc.text(line, contentMarginLeft + 5, yPosition);
-          yPosition += substitutionFontSize + 1;
+          yPosition += substitutionFontSize + 0.5;
         });
       });
     }
