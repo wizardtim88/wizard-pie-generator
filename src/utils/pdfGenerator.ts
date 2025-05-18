@@ -60,38 +60,35 @@ export const generatePDF = (recipe: PieRecipe): void => {
   const pageWidth = 210;
   const pageHeight = 297;
   
-  // Yellow background rectangle dimensions
+  // Add dark navy background rectangle first (full page)
+  doc.setFillColor(12, 18, 55); // Dark navy background
+  doc.rect(0, 0, pageWidth, pageHeight, 'F');
+  
+  // Add pale yellow content rectangle with rounded corners
+  // We'll simulate rounded corners by drawing a regular rectangle
   const rectX = 15;
   const rectY = 15;
   const rectWidth = pageWidth - 30;
   const rectHeight = pageHeight - 30;
   
-  // Set yellow background rectangle
-  doc.setFillColor(254, 247, 205); // #FEF7CD - Soft Yellow
+  // Set pale yellow background rectangle
+  doc.setFillColor(254, 222, 180); // #FEDEB4 - Pale peach color to match image
   doc.rect(rectX, rectY, rectWidth, rectHeight, 'F');
   
   // Add wizard image in bottom right corner
-  // This would be a placeholder for now as we need to add actual wizard image assets
+  // This would use an image, but we'll leave space for it
+  const wizardWidth = 100; // Width of the space to reserve for wizard
+  const wizardHeight = 100; // Height of space to reserve for wizard
   
   // Content margins (inside the yellow rectangle)
-  const contentMarginLeft = 25;
-  const contentMarginRight = 25;
-  const contentMarginTop = 25;
-  const contentMarginBottom = 60; // Leave space for wizard image
+  const contentMarginLeft = 30;
+  const contentMarginRight = 30;
+  const contentMarginTop = 35;
+  const contentMarginBottom = 80; // Leave space for wizard image and website
   const contentWidth = pageWidth - contentMarginLeft - contentMarginRight;
   
   // Start position for content
   let yPosition = contentMarginTop;
-  
-  // Function to check available space and adjust font sizes if needed
-  const checkAndAdjustContent = (content: string[], estimatedHeight: number, currentFontSize: number): number => {
-    const availableSpace = pageHeight - contentMarginBottom - yPosition;
-    if (estimatedHeight > availableSpace && currentFontSize > 8) {
-      // Reduce font size and recalculate
-      return currentFontSize - 0.5;
-    }
-    return currentFontSize;
-  };
   
   // Calculate total content length to estimate space needs
   const allInstructions = recipe.instructions.join(' ');
@@ -103,37 +100,49 @@ export const generatePDF = (recipe: PieRecipe): void => {
   const totalContentLength = allInstructions.length + allIngredients.length;
   
   // Dynamically set initial font sizes based on content length
-  let titleFontSize = 20;
+  let titleFontSize = 18;
   let headingFontSize = 14;
   let textFontSize = 11;
   
-  if (totalContentLength > 2000) {
-    titleFontSize = 18;
+  // Adjust font sizes based on content length to ensure fit on one page
+  if (totalContentLength > 2500) {
+    titleFontSize = 16;
+    headingFontSize = 11;
+    textFontSize = 8;
+  } else if (totalContentLength > 2000) {
+    titleFontSize = 17;
     headingFontSize = 12;
     textFontSize = 9;
   } else if (totalContentLength > 1500) {
-    titleFontSize = 19;
+    titleFontSize = 18;
     headingFontSize = 13;
     textFontSize = 10;
+  }
+  
+  // Further reduce font size if we have many instructions or ingredients
+  if (recipe.instructions.length > 10 || allIngredients.length > 15) {
+    titleFontSize -= 1;
+    headingFontSize -= 1;
+    textFontSize -= 1;
   }
   
   // Add title
   doc.setFontSize(titleFontSize);
   doc.setTextColor(126, 105, 171); // Purple color similar to wizard-accent
   doc.text(recipe.title, pageWidth / 2, yPosition, { align: "center" });
-  yPosition += titleFontSize / 2;
+  yPosition += titleFontSize / 2 + 5;
   
   // Add recipe type
   doc.setFontSize(headingFontSize);
-  doc.setTextColor(100, 100, 100);
-  doc.text(`Type: ${recipe.type === "sweet" ? "Sweet" : "Savory"} Pie`, contentMarginLeft, yPosition);
-  yPosition += headingFontSize / 2;
+  doc.setTextColor(80, 80, 80);
+  doc.text(`${recipe.type === "sweet" ? "Sweet" : "Savory"} Pie`, pageWidth / 2, yPosition, { align: "center" });
+  yPosition += headingFontSize + 6;
   
   // Add baking details
   doc.setFontSize(headingFontSize);
-  doc.setTextColor(100, 100, 100);
+  doc.setTextColor(80, 80, 80);
   doc.text("Baking Details", contentMarginLeft, yPosition);
-  yPosition += headingFontSize / 2;
+  yPosition += headingFontSize / 2 + 3;
   
   doc.setFontSize(textFontSize);
   const bakingDetails = [
@@ -144,78 +153,90 @@ export const generatePDF = (recipe: PieRecipe): void => {
   
   bakingDetails.forEach(detail => {
     doc.text(detail, contentMarginLeft + 5, yPosition);
-    yPosition += textFontSize / 1.5;
+    yPosition += textFontSize + 2;
   });
-  yPosition += textFontSize / 2;
+  yPosition += 5;
   
   // Add ingredients section
   doc.setFontSize(headingFontSize);
-  doc.setTextColor(100, 100, 100);
+  doc.setTextColor(80, 80, 80);
   doc.text("Ingredients", contentMarginLeft, yPosition);
-  yPosition += headingFontSize / 2;
+  yPosition += headingFontSize / 2 + 4;
   
   // For the crust
   doc.setFontSize(textFontSize + 1);
+  doc.setTextColor(60, 60, 60);
   doc.text("For the Crust:", contentMarginLeft, yPosition);
-  yPosition += (textFontSize + 1) / 1.5;
+  yPosition += (textFontSize + 1) + 2;
   
   // Add crust ingredients
   doc.setFontSize(textFontSize);
+  doc.setTextColor(80, 80, 80);
   recipe.ingredients.crust.forEach((item) => {
     const textLines = doc.splitTextToSize(`• ${item}`, contentWidth - 10);
     textLines.forEach(line => {
       doc.text(line, contentMarginLeft + 5, yPosition);
-      yPosition += textFontSize / 1.5;
+      yPosition += textFontSize + 1;
     });
   });
-  yPosition += textFontSize / 3;
+  yPosition += 3;
   
   // For the filling
   doc.setFontSize(textFontSize + 1);
+  doc.setTextColor(60, 60, 60);
   doc.text("For the Filling:", contentMarginLeft, yPosition);
-  yPosition += (textFontSize + 1) / 1.5;
+  yPosition += (textFontSize + 1) + 2;
   
   // Add filling ingredients
   doc.setFontSize(textFontSize);
+  doc.setTextColor(80, 80, 80);
   recipe.ingredients.filling.forEach((item) => {
     const textLines = doc.splitTextToSize(`• ${item}`, contentWidth - 10);
     textLines.forEach(line => {
       doc.text(line, contentMarginLeft + 5, yPosition);
-      yPosition += textFontSize / 1.5;
+      yPosition += textFontSize + 1;
     });
   });
-  yPosition += textFontSize / 3;
+  yPosition += 3;
   
   // For the topping (if exists)
   if (recipe.ingredients.topping && recipe.ingredients.topping.length > 0) {
     doc.setFontSize(textFontSize + 1);
+    doc.setTextColor(60, 60, 60);
     doc.text("For the Topping:", contentMarginLeft, yPosition);
-    yPosition += (textFontSize + 1) / 1.5;
+    yPosition += (textFontSize + 1) + 2;
     
     // Add topping ingredients
     doc.setFontSize(textFontSize);
+    doc.setTextColor(80, 80, 80);
     recipe.ingredients.topping.forEach((item) => {
       const textLines = doc.splitTextToSize(`• ${item}`, contentWidth - 10);
       textLines.forEach(line => {
         doc.text(line, contentMarginLeft + 5, yPosition);
-        yPosition += textFontSize / 1.5;
+        yPosition += textFontSize + 1;
       });
     });
-    yPosition += textFontSize / 3;
+    yPosition += 3;
   }
   
-  // Check if we need to reduce font size for instructions
-  const estimatedInstructionHeight = (recipe.instructions.length * textFontSize * 2); // Rough estimation
-  textFontSize = checkAndAdjustContent(recipe.instructions, estimatedInstructionHeight, textFontSize);
-  
   // Add instructions section
+  // Check remaining space and adjust font size if needed
+  const remainingSpace = pageHeight - contentMarginBottom - yPosition;
+  const estimatedInstructionHeight = (recipe.instructions.length * (textFontSize + 2));
+  
+  if (estimatedInstructionHeight > remainingSpace) {
+    // Reduce font size for instructions to fit
+    textFontSize = Math.max(7, textFontSize - 1);
+  }
+  
   doc.setFontSize(headingFontSize);
-  doc.setTextColor(100, 100, 100);
+  doc.setTextColor(80, 80, 80);
   doc.text("Instructions", contentMarginLeft, yPosition);
-  yPosition += headingFontSize / 2;
+  yPosition += headingFontSize / 2 + 4;
   
   // Add instructions with proper line wrapping and numbering
   doc.setFontSize(textFontSize);
+  doc.setTextColor(80, 80, 80);
   recipe.instructions.forEach((instruction, index) => {
     const numberText = `${index + 1}. `;
     const instructionText = instruction;
@@ -231,10 +252,10 @@ export const generatePDF = (recipe: PieRecipe): void => {
       // First line goes next to the number, rest are indented
       const xPosition = i === 0 ? contentMarginLeft + 7 : contentMarginLeft + 7;
       doc.text(line, xPosition, yPosition);
-      yPosition += textFontSize / 1.5;
+      yPosition += textFontSize + 1;
     });
     
-    yPosition += textFontSize / 5; // Add small space between instructions
+    yPosition += 2; // Add small space between instructions
   });
   
   // Collect all ingredients to find magical ones
@@ -254,37 +275,34 @@ export const generatePDF = (recipe: PieRecipe): void => {
     }
   });
   
-  // Check remaining space and adjust font size for substitutions if needed
-  let substitutionFontSize = textFontSize;
-  if (mentionedMagicalIngredients.length > 0) {
-    const estimatedSubstitutionHeight = mentionedMagicalIngredients.length * textFontSize;
-    const remainingSpace = pageHeight - contentMarginBottom - yPosition;
+  // Check remaining space again
+  const spaceLeft = pageHeight - contentMarginBottom - yPosition;
+  
+  // Only add substitutions if we have magical ingredients and enough space
+  if (mentionedMagicalIngredients.length > 0 && spaceLeft > 30) {
+    // Adjust font size for substitutions based on remaining space
+    let substitutionFontSize = Math.min(textFontSize, 9);
     
-    if (estimatedSubstitutionHeight > remainingSpace) {
-      substitutionFontSize = Math.max(8, textFontSize - 1);
+    if (spaceLeft < 50 && mentionedMagicalIngredients.length > 3) {
+      substitutionFontSize = Math.max(7, substitutionFontSize - 1);
     }
     
-    yPosition += textFontSize / 2;
+    yPosition += 5;
     
-    doc.setFontSize(headingFontSize);
-    doc.setTextColor(126, 105, 171);
+    doc.setFontSize(Math.min(headingFontSize, 12));
+    doc.setTextColor(126, 105, 171); // Purple for magical content
     doc.text("Real World Substitutions", contentMarginLeft, yPosition);
-    yPosition += headingFontSize / 2;
+    yPosition += Math.min(headingFontSize, 12) + 2;
     
     doc.setFontSize(substitutionFontSize);
-    doc.setTextColor(100, 100, 100);
-    const introText = "To make this pie in the non-magical world, use these substitutions:";
-    const introLines = doc.splitTextToSize(introText, contentWidth);
-    introLines.forEach(line => {
-      doc.text(line, contentMarginLeft, yPosition);
-      yPosition += substitutionFontSize / 1.5;
-    });
+    doc.setTextColor(80, 80, 80);
     
-    // Add substitutions in multiple columns if there are many
-    if (mentionedMagicalIngredients.length > 5) {
+    // Determine whether to use multiple columns based on count and space
+    if (mentionedMagicalIngredients.length > 6 && contentWidth > 100) {
+      // Use two columns for many substitutions
       const column1 = mentionedMagicalIngredients.slice(0, Math.ceil(mentionedMagicalIngredients.length / 2));
       const column2 = mentionedMagicalIngredients.slice(Math.ceil(mentionedMagicalIngredients.length / 2));
-      const columnWidth = (contentWidth - 10) / 2;
+      const columnWidth = (contentWidth - 20) / 2;
       
       let col1Y = yPosition;
       let col2Y = yPosition;
@@ -293,7 +311,7 @@ export const generatePDF = (recipe: PieRecipe): void => {
         const subLines = doc.splitTextToSize(`• ${sub}`, columnWidth);
         subLines.forEach(line => {
           doc.text(line, contentMarginLeft, col1Y);
-          col1Y += substitutionFontSize / 1.5;
+          col1Y += substitutionFontSize + 1;
         });
       });
       
@@ -301,7 +319,7 @@ export const generatePDF = (recipe: PieRecipe): void => {
         const subLines = doc.splitTextToSize(`• ${sub}`, columnWidth);
         subLines.forEach(line => {
           doc.text(line, contentMarginLeft + columnWidth + 10, col2Y);
-          col2Y += substitutionFontSize / 1.5;
+          col2Y += substitutionFontSize + 1;
         });
       });
       
@@ -309,38 +327,20 @@ export const generatePDF = (recipe: PieRecipe): void => {
     } else {
       // Single column for fewer substitutions
       mentionedMagicalIngredients.forEach(substitution => {
-        const substitutionLines = doc.splitTextToSize(`• ${substitution}`, contentWidth);
+        const substitutionLines = doc.splitTextToSize(`• ${substitution}`, contentWidth - 10);
         substitutionLines.forEach(line => {
-          doc.text(line, contentMarginLeft, yPosition);
-          yPosition += substitutionFontSize / 1.5;
+          doc.text(line, contentMarginLeft + 5, yPosition);
+          yPosition += substitutionFontSize + 1;
         });
       });
     }
-  } else {
-    // Add a general note about magical ingredients if no specific magical ingredients found
-    yPosition += textFontSize / 2;
-    doc.setFontSize(textFontSize);
-    doc.setTextColor(126, 105, 171);
-    doc.text("Note on Magical Ingredients:", contentMarginLeft, yPosition);
-    yPosition += textFontSize / 1.5;
-    
-    doc.setFontSize(textFontSize);
-    doc.setTextColor(100, 100, 100);
-    const magicNote = "Any magical ingredients can be replaced with their non-magical counterparts while maintaining the same measurements for a delicious real-world version of this magical pie.";
-    
-    const noteLines = doc.splitTextToSize(magicNote, contentWidth);
-    noteLines.forEach(line => {
-      doc.text(line, contentMarginLeft, yPosition);
-      yPosition += textFontSize / 1.5;
-    });
   }
   
-  // Add footer text
-  doc.setFontSize(9);
-  doc.setTextColor(150, 150, 150);
-  doc.text('Magical Pie Recipe Generator', pageWidth / 2, pageHeight - 20, { align: "center" });
+  // Add website URL at the bottom
+  doc.setFontSize(10);
+  doc.setTextColor(126, 105, 171);
+  doc.text('WizardTim.com', pageWidth / 2, pageHeight - 20, { align: "center" });
   
-  // Download the PDF
+  // Download the PDF with the recipe title
   doc.save(`${recipe.title.replace(/\s+/g, '_').toLowerCase()}_recipe.pdf`);
 };
-
