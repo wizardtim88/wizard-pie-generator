@@ -206,10 +206,13 @@ export const generatePDF = (recipe: PieRecipe): void => {
     
     ingredients.forEach((item) => {
       const abbreviatedItem = abbreviateMeasurements(item);
-      const textLines = doc.splitTextToSize(`• ${abbreviatedItem}`, columnWidth - 5);
+      // Ensure text wrapping by calculating the maximum width for the column
+      const maxWidth = columnWidth - 5;
+      const textLines = doc.splitTextToSize(`• ${abbreviatedItem}`, maxWidth);
+      
       textLines.forEach((line, i) => {
         doc.text(line, currentX, currentY);
-        currentY += textFontSize * 0.6; // Reduced line spacing to fit more content
+        currentY += textFontSize * 0.5; // Even more reduced line spacing (single-spacing)
       });
     });
     
@@ -265,18 +268,34 @@ export const generatePDF = (recipe: PieRecipe): void => {
   // Update y position to the maximum of both columns
   yPosition = Math.max(leftColY, rightColY) + 1; // Reduced spacing after ingredients
   
-  // --- OPTIMIZE INSTRUCTIONS SECTION ---
-  // Determine if instructions need two columns based on count and remaining space
-  const remainingSpace = pageHeight - contentMarginBottom - yPosition;
-  const estimatedInstructionHeight = recipe.instructions.length * (textFontSize * 0.6); // Further reduced line height
-  const useMultiColumnInstructions = 
-    recipe.instructions.length > 8 || 
-    estimatedInstructionHeight > remainingSpace;
+  // --- IMPROVED INSTRUCTIONS SECTION WITH OVERFLOW PREVENTION ---
   
-  // Adjust instruction font size if needed
+  // Calculate available height for instructions
+  const availableHeight = pageHeight - contentMarginBottom - yPosition;
+  
+  // Estimate instruction content size
+  const estimatedInstructionHeight = recipe.instructions.length * (textFontSize * 0.7);
+  
+  // Dynamic decision for layout based on content and space
   let instructionFontSize = textFontSize;
-  if (estimatedInstructionHeight > remainingSpace) {
-    instructionFontSize = Math.max(6.5, textFontSize - 1);
+  let instructionLineHeight = 0.5; // Default to single-spacing
+  let useMultiColumnInstructions = recipe.instructions.length > 8;
+  
+  // Progressively adjust layout parameters based on content amount
+  if (estimatedInstructionHeight > availableHeight * 1.5) {
+    // Very long content - smallest font, tightest spacing, forced single column
+    instructionFontSize = Math.max(8, textFontSize - 1.5);
+    instructionLineHeight = 0.4;
+    useMultiColumnInstructions = false; // Force single column for very long content
+  } 
+  else if (estimatedInstructionHeight > availableHeight) {
+    // Long content - reduced font and spacing
+    instructionFontSize = Math.max(8, textFontSize - 1);
+    instructionLineHeight = 0.45;
+    // If instructions are extremely long, switch to single column
+    if (recipe.instructions.length > 15) {
+      useMultiColumnInstructions = false;
+    }
   }
   
   // Add instructions heading
@@ -286,7 +305,7 @@ export const generatePDF = (recipe: PieRecipe): void => {
   doc.text("Instructions", contentMarginLeft, yPosition);
   yPosition += headingFontSize / 2 + 1; // Reduced spacing after instructions heading
   
-  // Process instructions
+  // Process instructions with improved wrapping
   doc.setFontSize(instructionFontSize);
   doc.setTextColor(80, 80, 80);
   doc.setFont('helvetica', 'normal');
@@ -297,74 +316,104 @@ export const generatePDF = (recipe: PieRecipe): void => {
     const leftInstructions = recipe.instructions.slice(0, midInstructionPoint);
     const rightInstructions = recipe.instructions.slice(midInstructionPoint);
     
+    // Calculate safe column width - ensure it's not too wide
+    let safeColumnWidth = (contentWidth - 15) / 2; // Extra padding between columns
+    
     let leftInstrY = yPosition;
     let rightInstrY = yPosition;
     
     // Process left column
     leftInstructions.forEach((instruction, index) => {
-      // Abbreviate and condense where possible
       const condensedInstruction = abbreviateMeasurements(instruction);
-      
       const numberText = `${index + 1}. `;
-      const textLines = doc.splitTextToSize(condensedInstruction, columnWidth - 10);
+      const numberWidth = doc.getTextWidth(numberText);
+      
+      // Ensure text fits in column with proper wrapping
+      const textLines = doc.splitTextToSize(
+        condensedInstruction, 
+        safeColumnWidth - numberWidth - 2 // Subtract number width and some padding
+      );
       
       // Add the number
       doc.text(numberText, contentMarginLeft, leftInstrY);
       
-      // Add the instruction text with proper indentation
+      // Add the instruction text with proper indentation and wrapping
       textLines.forEach((line, i) => {
-        const xPosition = i === 0 ? contentMarginLeft + 5 : contentMarginLeft + 5;
+        const xPosition = i === 0 ? 
+          contentMarginLeft + numberWidth : 
+          contentMarginLeft + numberWidth;
+          
         doc.text(line, xPosition, leftInstrY);
-        leftInstrY += instructionFontSize * 0.6; // Further reduced line spacing
+        leftInstrY += instructionFontSize * instructionLineHeight; // Single-spacing
       });
       
-      leftInstrY += 0.5; // Reduced space between instructions
+      leftInstrY += 0.5; // Minimal spacing between instructions
     });
     
-    // Process right column
+    // Process right column with same careful wrapping
     rightInstructions.forEach((instruction, index) => {
-      // Abbreviate and condense where possible
       const condensedInstruction = abbreviateMeasurements(instruction);
-      
       const numberText = `${index + midInstructionPoint + 1}. `;
-      const textLines = doc.splitTextToSize(condensedInstruction, columnWidth - 10);
+      const numberWidth = doc.getTextWidth(numberText);
+      const rightColumnX = contentMarginLeft + safeColumnWidth + 10;
+      
+      // Ensure text fits in column with proper wrapping
+      const textLines = doc.splitTextToSize(
+        condensedInstruction, 
+        safeColumnWidth - numberWidth - 2 // Subtract number width and some padding
+      );
       
       // Add the number
-      doc.text(numberText, contentMarginLeft + columnWidth + 5, rightInstrY);
+      doc.text(numberText, rightColumnX, rightInstrY);
       
-      // Add the instruction text with proper indentation
+      // Add the instruction text with proper indentation and wrapping
       textLines.forEach((line, i) => {
-        const xPosition = i === 0 ? contentMarginLeft + columnWidth + 10 : contentMarginLeft + columnWidth + 10;
+        const xPosition = i === 0 ? 
+          rightColumnX + numberWidth : 
+          rightColumnX + numberWidth;
+          
         doc.text(line, xPosition, rightInstrY);
-        rightInstrY += instructionFontSize * 0.6; // Further reduced line spacing
+        rightInstrY += instructionFontSize * instructionLineHeight; // Single-spacing
       });
       
-      rightInstrY += 0.5; // Reduced space between instructions
+      rightInstrY += 0.5; // Minimal spacing between instructions
     });
     
-    yPosition = Math.max(leftInstrY, rightInstrY) + 1; // Reduced spacing after instructions
+    yPosition = Math.max(leftInstrY, rightInstrY) + 1; // Update position after instructions
   } else {
-    // Single column layout for instructions
+    // Single column layout for instructions - better for longer content
+    const fullWidth = contentWidth - 10; // Full width with small margin
+    
     recipe.instructions.forEach((instruction, index) => {
-      // Abbreviate and condense where possible
       const condensedInstruction = abbreviateMeasurements(instruction);
-      
       const numberText = `${index + 1}. `;
-      const textLines = doc.splitTextToSize(condensedInstruction, contentWidth - 10);
+      const numberWidth = doc.getTextWidth(numberText);
+      
+      // Ensure text fits in full width with proper wrapping
+      const textLines = doc.splitTextToSize(
+        condensedInstruction, 
+        fullWidth - numberWidth - 2 // Subtract number width and some padding
+      );
       
       // Add the number
       doc.text(numberText, contentMarginLeft, yPosition);
       
-      // Add the instruction text with proper indentation
+      // Add the instruction text with proper indentation and wrapping
       textLines.forEach((line, i) => {
-        const xPosition = i === 0 ? contentMarginLeft + 5 : contentMarginLeft + 5;
+        const xPosition = i === 0 ? 
+          contentMarginLeft + numberWidth : 
+          contentMarginLeft + numberWidth;
+          
         doc.text(line, xPosition, yPosition);
-        yPosition += instructionFontSize * 0.6; // Further reduced line spacing
+        yPosition += instructionFontSize * instructionLineHeight; // Single-spacing
       });
       
-      yPosition += 0.5; // Reduced space between instructions
+      yPosition += 0.5; // Minimal spacing between instructions
     });
   }
+  
+  // Check if there's enough space for substitutions
+  const remainingHeight = pageHeight - contentMarginBottom - yPosition;
   
   // --- OPTIMIZE SUBSTITUTIONS SECTION ---
   // Collect all ingredients to find magical ones
@@ -386,12 +435,13 @@ export const generatePDF = (recipe: PieRecipe): void => {
   
   // Check if we have enough space for substitutions
   const remainingHeightAfterInstructions = pageHeight - contentMarginBottom - yPosition;
-  const expectedSubstitutionHeight = mentionedMagicalIngredients.length * (textFontSize * 0.6) + 12; // Reduced height estimate
+  const expectedSubstitutionHeight = mentionedMagicalIngredients.length * (textFontSize * 0.5) + 12; // Reduced height estimate
   
   // Only add substitutions if we have magical ingredients and enough space
-  if (mentionedMagicalIngredients.length > 0 && remainingHeightAfterInstructions > 20) {
+  if (mentionedMagicalIngredients.length > 0 && remainingHeightAfterInstructions > 15) {
     // Adjust font size for substitutions based on remaining space
     let substitutionFontSize = Math.max(6.5, textFontSize - 0.5);
+    let substitutionLineHeight = 0.5; // Single-spacing
     
     if (expectedSubstitutionHeight > remainingHeightAfterInstructions) {
       substitutionFontSize = Math.max(6, substitutionFontSize - 0.5);
@@ -409,41 +459,55 @@ export const generatePDF = (recipe: PieRecipe): void => {
     doc.setTextColor(80, 80, 80);
     doc.setFont('helvetica', 'normal');
     
-    // Determine whether to use multiple columns based on count and space
+    // Determine layout based on space and content
     if (mentionedMagicalIngredients.length > 4 && remainingHeightAfterInstructions < 40) {
-      // Use two columns for many substitutions
-      const subColumnWidth = (contentWidth - 10) / 2;
+      // Two columns for many substitutions
+      const subColumnWidth = (contentWidth - 15) / 2; // More space between columns
       const column1 = mentionedMagicalIngredients.slice(0, Math.ceil(mentionedMagicalIngredients.length / 2));
       const column2 = mentionedMagicalIngredients.slice(Math.ceil(mentionedMagicalIngredients.length / 2));
       
       let col1Y = yPosition;
       let col2Y = yPosition;
       
+      // Process first column with proper wrapping
       column1.forEach(sub => {
         const subLines = doc.splitTextToSize(`• ${sub}`, subColumnWidth);
-        subLines.forEach(line => {
+        
+        subLines.forEach((line, i) => {
           doc.text(line, contentMarginLeft, col1Y);
-          col1Y += substitutionFontSize * 0.6; // Reduced line spacing
+          col1Y += substitutionFontSize * substitutionLineHeight; // Single-spacing
         });
+        
+        col1Y += 0.5; // Minimal spacing between items
       });
       
+      // Process second column with proper wrapping
       column2.forEach(sub => {
         const subLines = doc.splitTextToSize(`• ${sub}`, subColumnWidth);
-        subLines.forEach(line => {
-          doc.text(line, contentMarginLeft + subColumnWidth + 5, col2Y);
-          col2Y += substitutionFontSize * 0.6; // Reduced line spacing
+        const col2X = contentMarginLeft + subColumnWidth + 10;
+        
+        subLines.forEach((line, i) => {
+          doc.text(line, col2X, col2Y);
+          col2Y += substitutionFontSize * substitutionLineHeight; // Single-spacing
         });
+        
+        col2Y += 0.5; // Minimal spacing between items
       });
       
       yPosition = Math.max(col1Y, col2Y);
     } else {
       // Single column for fewer substitutions
+      const fullWidth = contentWidth - 10;
+      
       mentionedMagicalIngredients.forEach(substitution => {
-        const substitutionLines = doc.splitTextToSize(`• ${substitution}`, contentWidth - 10);
-        substitutionLines.forEach(line => {
+        const substitutionLines = doc.splitTextToSize(`• ${substitution}`, fullWidth);
+        
+        substitutionLines.forEach((line, i) => {
           doc.text(line, contentMarginLeft + 5, yPosition);
-          yPosition += substitutionFontSize * 0.6; // Reduced line spacing
+          yPosition += substitutionFontSize * substitutionLineHeight; // Single-spacing
         });
+        
+        yPosition += 0.5; // Minimal spacing between items
       });
     }
   }
