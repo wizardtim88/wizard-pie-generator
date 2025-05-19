@@ -1,4 +1,3 @@
-
 import { PieRecipe } from './recipeGenerator';
 import jsPDF from 'jspdf';
 
@@ -96,7 +95,7 @@ export const generatePDF = (recipe: PieRecipe): void => {
   const contentMarginLeft = 25;
   const contentMarginRight = 25;
   const contentMarginTop = 30;
-  const contentMarginBottom = 65; // Increased to leave room for wizard image
+  const contentMarginBottom = 25; // Reduced margin now that we're removing the wizard image
   const contentWidth = pageWidth - contentMarginLeft - contentMarginRight;
   
   // Calculate total content length to estimate space needs
@@ -447,20 +446,6 @@ export const generatePDF = (recipe: PieRecipe): void => {
         });
       });
     }
-  }
-  
-  // Add wizard image to bottom right corner
-  try {
-    // Add the wizard image (using the uploaded image path)
-    const imgWidth = 60; // Width of wizard image in mm
-    const imgHeight = 60; // Height of wizard image proportionally
-    const imgX = pageWidth - margin - imgWidth - 5; // Position from right side
-    const imgY = pageHeight - margin - imgHeight - 5; // Position from bottom
-    
-    // Add the wizard image from the uploaded file
-    doc.addImage('/lovable-uploads/07cc5aec-9fc8-432f-b0b9-e25f8da75f72.png', 'PNG', imgX, imgY, imgWidth, imgHeight);
-  } catch (error) {
-    console.error('Error adding wizard image:', error);
   }
   
   // Add website URL at the bottom (white text on dark blue border)
