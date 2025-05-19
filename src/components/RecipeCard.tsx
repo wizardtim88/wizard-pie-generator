@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -6,6 +7,7 @@ import { PieChart, CakeSlice, Utensils, Sparkles, Download } from 'lucide-react'
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { generatePDF } from "@/utils/pdfGenerator";
+import { toast } from 'sonner';
 
 interface RecipeCardProps {
   recipe: PieRecipe | null;
@@ -89,7 +91,18 @@ const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, className }) => {
   const hasMagicalIngredients = mentionedMagicalIngredients.length > 0;
   
   const handleDownloadPDF = () => {
-    generatePDF(recipe);
+    try {
+      toast.loading("Crafting your magical PDF...");
+      generatePDF(recipe);
+      toast.success("PDF successfully created!", {
+        description: "Your enchanted recipe has been saved to your device."
+      });
+    } catch (error) {
+      toast.error("Magical mishap!", {
+        description: "Something went wrong while creating your PDF."
+      });
+      console.error("PDF generation error:", error);
+    }
   };
 
   return (
